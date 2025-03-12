@@ -6,6 +6,7 @@ pipeline {
     environment {
         WORKSPACE = "${env.WORKSPACE}"
         SERVICES_WITHOUT_TESTS = "spring-petclinic-admin-server spring-petclinic-genai-service"
+        CONFIG_SERVER_URL = "http://localhost:8888"  // Allow dynamic override if needed
     }
 
     stages {
@@ -20,6 +21,30 @@ pipeline {
                     cd DevOps_Project1
                     git pull origin main
                     '''
+                }
+            }
+        }
+
+        stage('Start Config Server') {
+            steps {
+                script {
+                    dir("DevOps_Project1/spring-petclinic-config-server") {
+                        sh 'nohup mvn spring-boot:run > config-server.log 2>&1 &'
+                        sleep 10  // Wait for the server to start
+                    }
+                }
+            }
+        }
+
+        stage('Verify Config Server') {
+            steps {
+                script {
+                    def configServerCheck = sh(script: "curl -s -o /dev/null -w '%{http_code}' ${CONFIG_SERVER_URL}/actuator/health", returnStdout: true).trim()
+                    if (configServerCheck == '200') {
+                        echo "✅ Config Server is running. Proceeding with tests..."
+                    } else {
+                        error("❌ Config Server is NOT running. Aborting tests.")
+                    }
                 }
             }
         }
@@ -81,7 +106,6 @@ pipeline {
                     for (service in serviceList) {
                         echo "Testing service: ${service}"
                         dir("DevOps_Project1/${service}") {
-                            // ✅ **Check if `pom.xml` exists**
                             if (fileExists('pom.xml')) {
                                 echo "✅ pom.xml found in ${service}"
                                 if (!env.SERVICES_WITHOUT_TESTS.contains(service)) {
@@ -146,7 +170,6 @@ pipeline {
                     for (service in serviceList) {
                         echo "Building service: ${service}"
                         dir("DevOps_Project1/${service}") {
-                            // **Check if `pom.xml` exists before building**
                             if (fileExists('pom.xml')) {
                                 echo "pom.xml found in ${service}, proceeding with build."
                                 sh 'mvn package -DskipTests'
