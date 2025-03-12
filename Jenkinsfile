@@ -29,7 +29,11 @@ pipeline {
                 script {
                     echo "Running pipeline for Branch: ${env.BRANCH_NAME}"
 
-                    def changedFiles = sh(script: "cd DevOps_Project1 && git diff --name-only HEAD~1 HEAD", returnStdout: true).trim()
+                    def prevCommitExists = sh(script: "cd DevOps_Project1 && git rev-parse HEAD~1", returnStatus: true) == 0
+                    def changedFiles = prevCommitExists 
+                        ? sh(script: "cd DevOps_Project1 && git diff --name-only HEAD~1 HEAD", returnStdout: true).trim().split("\n")
+                        : []
+
                     def services = [
                         'spring-petclinic-admin-server',
                         'spring-petclinic-api-gateway',
@@ -42,25 +46,26 @@ pipeline {
                     ]
 
                     env.CHANGED_SERVICES = ""
+                    def rebuildAll = false
+
                     for (service in services) {
-                        if (changedFiles.contains(service)) {
+                        if (changedFiles.find { it.contains(service) }) {
                             env.CHANGED_SERVICES = env.CHANGED_SERVICES + " " + service
                         }
                     }
 
-                    // If no service-specific changes, check for common config changes
-                    if (env.CHANGED_SERVICES == "") {
-                        if (changedFiles.contains("pom.xml") || 
-                            changedFiles.contains(".github") || 
-                            changedFiles.contains("docker-compose") ||
-                            changedFiles.contains("Jenkinsfile")) {
-                            echo "Common files changed, will build all services"
-                            env.CHANGED_SERVICES = services.join(" ")
-                        } else {
-                            echo "No relevant changes detected"
-                        }
+                    def commonFiles = ["pom.xml", ".github", "docker-compose.yml", "Jenkinsfile"]
+                    if (changedFiles.find { file -> commonFiles.any { file.contains(it) } }) {
+                        rebuildAll = true
+                        env.CHANGED_SERVICES = services.join(" ")
                     }
-                    
+
+                    if (env.CHANGED_SERVICES == "") {
+                        echo "No relevant changes detected. Skipping pipeline."
+                        currentBuild.result = 'SUCCESS'
+                        return
+                    }
+
                     echo "Services to build: ${env.CHANGED_SERVICES}"
                 }
             }
@@ -75,27 +80,33 @@ pipeline {
                     def serviceList = env.CHANGED_SERVICES.trim().split(" ")
                     for (service in serviceList) {
                         echo "Testing service: ${service}"
-                        dir("spring-petclinic-microservices/${service}") {
-                            if (!env.SERVICES_WITHOUT_TESTS.contains(service)) {
-                                try {
-                                    sh 'mvn clean test'
+                        dir("DevOps_Project1/${service}") {
+                            // ✅ **Check if `pom.xml` exists**
+                            if (fileExists('pom.xml')) {
+                                echo "✅ pom.xml found in ${service}"
+                                if (!env.SERVICES_WITHOUT_TESTS.contains(service)) {
+                                    try {
+                                        sh 'mvn clean test'
 
-                                    // Publish test results
-                                    junit allowEmptyResults: true, testResults: '**/target/surefire-reports/*.xml'
+                                        // Publish test results
+                                        junit allowEmptyResults: true, testResults: '**/target/surefire-reports/*.xml'
 
-                                    // Publish coverage reports
-                                    jacoco(
-                                        execPattern: '**/target/jacoco.exec',
-                                        classPattern: '**/target/classes',
-                                        sourcePattern: '**/src/main/java',
-                                        exclusionPattern: '**/src/test*'
-                                    )
-                                } catch (Exception e) {
-                                    echo "Warning: Tests failed for ${service}, but continuing pipeline"
-                                    currentBuild.result = 'UNSTABLE'
+                                        // Publish coverage reports
+                                        jacoco(
+                                            execPattern: '**/target/jacoco.exec',
+                                            classPattern: '**/target/classes',
+                                            sourcePattern: '**/src/main/java',
+                                            exclusionPattern: '**/src/test*'
+                                        )
+                                    } catch (Exception e) {
+                                        echo "Warning: Tests failed for ${service}, but continuing pipeline"
+                                        currentBuild.result = 'UNSTABLE'
+                                    }
+                                } else {
+                                    echo "Skipping tests for ${service} as it does not have test folders"
                                 }
                             } else {
-                                echo "Skipping tests for ${service} as it does not have test folders"
+                                echo "❌ pom.xml NOT FOUND in ${service}. Skipping tests."
                             }
                         }
                     }
@@ -111,9 +122,9 @@ pipeline {
                 script {
                     def serviceList = env.CHANGED_SERVICES.trim().split(" ")
                     for (service in serviceList) {
-                        def servicePath = "spring-petclinic-microservices/${service}"
-                        if (fileExists("${servicePath}/target/site/jacoco/jacoco.csv")) {
-                            def coverage = sh(script: "tail -1 ${servicePath}/target/site/jacoco/jacoco.csv | cut -d',' -f4", returnStdout: true).trim()
+                        def servicePath = "DevOps_Project1/${service}/target/site/jacoco/jacoco.csv"
+                        if (fileExists(servicePath)) {
+                            def coverage = sh(script: "tail -1 ${servicePath} | cut -d',' -f4", returnStdout: true).trim()
                             if (coverage.toInteger() < 70) {
                                 error("Test coverage below 70% for ${service}")
                             }
@@ -134,9 +145,15 @@ pipeline {
                     def serviceList = env.CHANGED_SERVICES.trim().split(" ")
                     for (service in serviceList) {
                         echo "Building service: ${service}"
-                        dir("spring-petclinic-microservices/${service}") {
-                            sh 'mvn package -DskipTests'
-                            archiveArtifacts artifacts: 'target/*.jar', fingerprint: true
+                        dir("DevOps_Project1/${service}") {
+                            // **Check if `pom.xml` exists before building**
+                            if (fileExists('pom.xml')) {
+                                echo "pom.xml found in ${service}, proceeding with build."
+                                sh 'mvn package -DskipTests'
+                                archiveArtifacts artifacts: 'target/*.jar', fingerprint: true
+                            } else {
+                                echo "pom.xml NOT FOUND in ${service}. Skipping build."
+                            }
                         }
                     }
                 }
