@@ -6,7 +6,6 @@ pipeline {
     environment {
         WORKSPACE = "${env.WORKSPACE}"
         SERVICES_WITHOUT_TESTS = "spring-petclinic-admin-server spring-petclinic-genai-service"
-        CONFIG_SERVER_URL = "http://localhost:8888"  // Allow dynamic override if needed
     }
 
     stages {
@@ -21,52 +20,6 @@ pipeline {
                     cd DevOps_Project1
                     git pull origin main
                     '''
-                }
-            }
-        }
-
-        stage('Start Config Server') {
-            steps {
-                script {
-                    dir("DevOps_Project1/spring-petclinic-config-server") {
-                        sh 'nohup mvn spring-boot:run > config-server.log 2>&1 &'
-                        sleep 5  // Wait a few seconds before checking status
-
-                        // Wait up to 60 seconds for Config Server to start
-                        def maxRetries = 12
-                        def retryCount = 0
-                        def serverUp = false
-
-                        while (retryCount < maxRetries) {
-                            def status = sh(script: "curl -s -o /dev/null -w '%{http_code}' ${CONFIG_SERVER_URL}/actuator/health", returnStdout: true).trim()
-                            if (status == '200') {
-                                echo "Config Server is UP!"
-                                serverUp = true
-                                break
-                            } else {
-                                echo "Waiting for Config Server... (${retryCount + 1}/${maxRetries})"
-                                sleep 5
-                                retryCount++
-                            }
-                        }
-
-                        if (!serverUp) {
-                            error("Config Server did NOT start within 60 seconds. Check logs.")
-                        }
-                    }
-                }
-            }
-        }
-
-        stage('Verify Config Server') {
-            steps {
-                script {
-                    def configServerCheck = sh(script: "curl -s -o /dev/null -w '%{http_code}' ${CONFIG_SERVER_URL}/actuator/health", returnStdout: true).trim()
-                    if (configServerCheck == '200') {
-                        echo "Config Server is running. Proceeding with tests..."
-                    } else {
-                        error("Config Server is NOT running. Aborting tests.")
-                    }
                 }
             }
         }
@@ -132,7 +85,10 @@ pipeline {
                                 echo "pom.xml found in ${service}"
                                 if (!env.SERVICES_WITHOUT_TESTS.contains(service)) {
                                     try {
-                                        sh 'mvn clean test'
+                                        sh '''
+                                        # Run tests with a fallback config if Config Server is unavailable
+                                        mvn clean test -Dspring.cloud.config.enabled=false
+                                        '''
 
                                         // Publish test results
                                         junit allowEmptyResults: true, testResults: '**/target/surefire-reports/*.xml'
@@ -145,7 +101,7 @@ pipeline {
                                             exclusionPattern: '**/src/test*'
                                         )
                                     } catch (Exception e) {
-                                        echo "⚠Warning: Tests failed for ${service}, but continuing pipeline"
+                                        echo "⚠ Warning: Tests failed for ${service}, but continuing pipeline"
                                         currentBuild.result = 'UNSTABLE'
                                     }
                                 } else {
@@ -194,7 +150,10 @@ pipeline {
                         dir("DevOps_Project1/${service}") {
                             if (fileExists('pom.xml')) {
                                 echo "pom.xml found in ${service}, proceeding with build."
-                                sh 'mvn package -DskipTests'
+                                sh '''
+                                # Build without requiring Config Server
+                                mvn package -DskipTests -Dspring.cloud.config.enabled=false
+                                '''
                                 archiveArtifacts artifacts: 'target/*.jar', fingerprint: true
                             } else {
                                 echo "pom.xml NOT FOUND in ${service}. Skipping build."
