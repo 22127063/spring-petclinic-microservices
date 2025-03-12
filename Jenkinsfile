@@ -13,10 +13,10 @@ pipeline {
             steps {
                 script {
                     sh '''
-                    if [ ! -d DevOps_Project1 ]; then
-                        git clone https://github.com/22127063/DevOps_Project1.git
+                    if [ ! -d spring-petclinic-microservices ]; then
+                        git clone https://github.com/22127063/spring-petclinic-microservices.git
                     fi
-                    cd DevOps_Project1
+                    cd spring-petclinic-microservices
                     git pull origin main
                     '''
                 }
@@ -28,9 +28,9 @@ pipeline {
                 script {
                     echo "Running pipeline for Branch: ${env.BRANCH_NAME}"
 
-                    def prevCommitExists = sh(script: "cd DevOps_Project1 && git rev-parse HEAD~1", returnStatus: true) == 0
+                    def prevCommitExists = sh(script: "cd spring-petclinic-microservices && git rev-parse HEAD~1", returnStatus: true) == 0
                     def changedFiles = prevCommitExists 
-                        ? sh(script: "cd DevOps_Project1 && git diff --name-only HEAD~1 HEAD", returnStdout: true).trim().split("\n")
+                        ? sh(script: "cd spring-petclinic-microservices && git diff --name-only HEAD~1 HEAD", returnStdout: true).trim().split("\n")
                         : []
 
                     def services = [
@@ -79,7 +79,7 @@ pipeline {
                     def serviceList = env.CHANGED_SERVICES.trim().split(" ")
                     for (service in serviceList) {
                         echo "🔬 Testing service: ${service}"
-                        dir("DevOps_Project1/${service}") {
+                        dir("spring-petclinic-microservices/${service}") {
                             if (fileExists('pom.xml')) {
                                 echo "pom.xml found in ${service}"
                                 if (!env.SERVICES_WITHOUT_TESTS.contains(service)) {
@@ -118,7 +118,7 @@ pipeline {
                 script {
                     def serviceList = env.CHANGED_SERVICES.trim().split(" ")
                     for (service in serviceList) {
-                        def servicePath = "DevOps_Project1/${service}/target/site/jacoco/jacoco.csv"
+                        def servicePath = "spring-petclinic-microservices/${service}/target/site/jacoco/jacoco.csv"
                         if (fileExists(servicePath)) {
                             def coverage = sh(script: "tail -1 ${servicePath} | cut -d',' -f4", returnStdout: true).trim()
                             if (coverage.toInteger() < 70) {
@@ -141,7 +141,7 @@ pipeline {
                     def serviceList = env.CHANGED_SERVICES.trim().split(" ")
                     for (service in serviceList) {
                         echo "Building service: ${service}"
-                        dir("DevOps_Project1/${service}") {
+                        dir("spring-petclinic-microservices/${service}") {
                             if (fileExists('pom.xml')) {
                                 echo "pom.xml found in ${service}, proceeding with build."
                                 sh 'mvn package -DskipTests -Dspring.cloud.config.enabled=false'
