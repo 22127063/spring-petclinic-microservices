@@ -1,5 +1,5 @@
 pipeline {
-    agent any  // Ensures the pipeline runs on an available agent
+    agent any  // Runs on any available agent
 
     stages {
         stage('Setup') {
@@ -16,17 +16,26 @@ pipeline {
             steps {
                 script {
                     def changes = sh(script: "git diff --name-only HEAD~1", returnStdout: true).trim()
-                    def services = ['customers-service', 'vets-service', 'visit-service']
+                    def services = [
+                        'spring-petclinic-admin-server',
+                        'spring-petclinic-api-gateway',
+                        'spring-petclinic-config-server',
+                        'spring-petclinic-customers-service',
+                        'spring-petclinic-discovery-server',
+                        'spring-petclinic-genai-service',
+                        'spring-petclinic-vets-service',
+                        'spring-petclinic-visits-service'
+                    ]
 
-                    // Check which service changed
-                    def changedService = services.find { changes.contains(it) }
+                    // Check which services have changes
+                    def changedServices = services.findAll { changes.contains(it) }
 
-                    if (changedService) {
-                        echo "Detected changes in ${changedService}, delegating to service agent."
-                        env.SERVICE_CHANGED = changedService
+                    if (changedServices) {
+                        echo "Detected changes in: ${changedServices}"
+                        env.SERVICES_CHANGED = changedServices.join(',')
                     } else {
                         echo "No specific service changes, running full build."
-                        env.SERVICE_CHANGED = "main"
+                        env.SERVICES_CHANGED = "all"
                     }
                 }
             }
@@ -34,18 +43,22 @@ pipeline {
 
         stage('Run Tests') {
             when {
-                expression { env.SERVICE_CHANGED }
+                expression { env.SERVICES_CHANGED }
             }
             steps {
                 script {
-                    def agentLabel = env.SERVICE_CHANGED == 'main' ? 'agent-main' : 'agent-service'
-                    node(agentLabel) {
-                        if (env.SERVICE_CHANGED == "main") {
-                            echo "Running full test suite on agent-main..."
-                            sh "mvn clean test"
+                    def servicesToTest = env.SERVICES_CHANGED == "all" ? services : env.SERVICES_CHANGED.split(',')
+                    
+                    servicesToTest.each { service ->
+                        def testFolderExists = sh(script: "[ -d ${service}/src/test ] && echo true || echo false", returnStdout: true).trim()
+
+                        if (testFolderExists == "true") {
+                            node('agent-service') {
+                                echo "Running tests for ${service}..."
+                                sh "cd ${service} && mvn test"
+                            }
                         } else {
-                            echo "Running tests for ${env.SERVICE_CHANGED} on agent-service..."
-                            sh "cd ${env.SERVICE_CHANGED} && mvn test"
+                            echo "Skipping tests for ${service} (No test folder)."
                         }
                     }
                 }
@@ -60,13 +73,19 @@ pipeline {
 
         stage('Check Test Coverage') {
             when {
-                expression { env.SERVICE_CHANGED && env.SERVICE_CHANGED != 'main' }
+                expression { env.SERVICES_CHANGED && env.SERVICES_CHANGED != 'all' }
             }
             steps {
                 script {
-                    def coverage = sh(script: "tail -1 ${env.SERVICE_CHANGED}/target/site/jacoco/jacoco.csv | cut -d',' -f4", returnStdout: true).trim()
-                    if (coverage.toInteger() < 70) {
-                        error("Test coverage below 70% for ${env.SERVICE_CHANGED}")
+                    env.SERVICES_CHANGED.split(',').each { service ->
+                        def testFolderExists = sh(script: "[ -d ${service}/src/test ] && echo true || echo false", returnStdout: true).trim()
+
+                        if (testFolderExists == "true") {
+                            def coverage = sh(script: "tail -1 ${service}/target/site/jacoco/jacoco.csv | cut -d',' -f4", returnStdout: true).trim()
+                            if (coverage.toInteger() < 70) {
+                                error("Test coverage below 70% for ${service}")
+                            }
+                        }
                     }
                 }
             }
@@ -74,18 +93,16 @@ pipeline {
 
         stage('Build') {
             when {
-                expression { env.SERVICE_CHANGED }
+                expression { env.SERVICES_CHANGED }
             }
             steps {
                 script {
-                    def agentLabel = env.SERVICE_CHANGED == 'main' ? 'agent-main' : 'agent-service'
-                    node(agentLabel) {
-                        if (env.SERVICE_CHANGED == "main") {
-                            echo "Building full application on agent-main..."
-                            sh "mvn clean package -DskipTests"
-                        } else {
-                            echo "Building ${env.SERVICE_CHANGED} on agent-service..."
-                            sh "cd ${env.SERVICE_CHANGED} && mvn package -DskipTests"
+                    def servicesToBuild = env.SERVICES_CHANGED == "all" ? services : env.SERVICES_CHANGED.split(',')
+
+                    servicesToBuild.each { service ->
+                        node('agent-service') {
+                            echo "Building ${service}..."
+                            sh "cd ${service} && mvn clean package -DskipTests"
                         }
                     }
                 }
