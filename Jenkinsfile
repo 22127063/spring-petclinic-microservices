@@ -29,29 +29,30 @@ pipeline {
             steps {
                 script {
                     dir("DevOps_Project1/spring-petclinic-config-server") {
-                    sh 'nohup mvn spring-boot:run > config-server.log 2>&1 &'
-                    sleep 5  // Wait a few seconds before checking status
-                    
-                    // Wait up to 60 seconds for Config Server to start
-                    def maxRetries = 12
-                    def retryCount = 0
-                    def serverUp = false
-    
-                    while (retryCount < maxRetries) {
-                        def status = sh(script: "curl -s -o /dev/null -w '%{http_code}' http://localhost:8888/actuator/health", returnStdout: true).trim()
-                        if (status == '200') {
-                            echo "Config Server is UP!"
-                            serverUp = true
-                            break
-                        } else {
-                            echo "Waiting for Config Server... (${retryCount + 1}/${maxRetries})"
-                            sleep 5
-                            retryCount++
+                        sh 'nohup mvn spring-boot:run > config-server.log 2>&1 &'
+                        sleep 5  // Wait a few seconds before checking status
+
+                        // Wait up to 60 seconds for Config Server to start
+                        def maxRetries = 12
+                        def retryCount = 0
+                        def serverUp = false
+
+                        while (retryCount < maxRetries) {
+                            def status = sh(script: "curl -s -o /dev/null -w '%{http_code}' ${CONFIG_SERVER_URL}/actuator/health", returnStdout: true).trim()
+                            if (status == '200') {
+                                echo "Config Server is UP!"
+                                serverUp = true
+                                break
+                            } else {
+                                echo "Waiting for Config Server... (${retryCount + 1}/${maxRetries})"
+                                sleep 5
+                                retryCount++
+                            }
                         }
-                    }
-    
-                    if (!serverUp) {
-                        error("Config Server did NOT start within 60 seconds. Check logs.")
+
+                        if (!serverUp) {
+                            error("Config Server did NOT start within 60 seconds. Check logs.")
+                        }
                     }
                 }
             }
@@ -125,10 +126,10 @@ pipeline {
                 script {
                     def serviceList = env.CHANGED_SERVICES.trim().split(" ")
                     for (service in serviceList) {
-                        echo "Testing service: ${service}"
+                        echo "🔬 Testing service: ${service}"
                         dir("DevOps_Project1/${service}") {
                             if (fileExists('pom.xml')) {
-                                echo "✅ pom.xml found in ${service}"
+                                echo "pom.xml found in ${service}"
                                 if (!env.SERVICES_WITHOUT_TESTS.contains(service)) {
                                     try {
                                         sh 'mvn clean test'
@@ -144,14 +145,14 @@ pipeline {
                                             exclusionPattern: '**/src/test*'
                                         )
                                     } catch (Exception e) {
-                                        echo "Warning: Tests failed for ${service}, but continuing pipeline"
+                                        echo "⚠Warning: Tests failed for ${service}, but continuing pipeline"
                                         currentBuild.result = 'UNSTABLE'
                                     }
                                 } else {
-                                    echo "Skipping tests for ${service} as it does not have test folders"
+                                    echo "Skipping tests for ${service} (No test folders)"
                                 }
                             } else {
-                                echo "❌ pom.xml NOT FOUND in ${service}. Skipping tests."
+                                echo "pom.xml NOT FOUND in ${service}. Skipping tests."
                             }
                         }
                     }
