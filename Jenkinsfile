@@ -15,7 +15,7 @@ pipeline {
                     sh '''
                     # Clone the forked repo only if it doesn't exist
                     if [ ! -d DevOps_Project1 ]; then
-                        git clone https://github.com/YOUR_USERNAME/DevOps_Project1.git
+                        git clone https://github.com/22127063/DevOps_Project1.git
                     fi
                     cd DevOps_Project1
                     git pull origin main
