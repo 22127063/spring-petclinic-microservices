@@ -1,5 +1,5 @@
 pipeline {
-    agent { label 'agent-main' }
+    agent none
 
     environment {
         MAVEN_HOME = tool 'Maven 3.8.6'
