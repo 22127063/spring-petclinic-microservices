@@ -29,7 +29,7 @@ pipeline {
                 script {
                     echo "Running pipeline for Branch: ${env.BRANCH_NAME}"
 
-                    def changedFiles = sh(script: "cd spring-petclinic-microservices && git diff --name-only HEAD~1 HEAD", returnStdout: true).trim()
+                    def changedFiles = sh(script: "cd DevOps_Project1 && git diff --name-only HEAD~1 HEAD", returnStdout: true).trim()
                     def services = [
                         'spring-petclinic-admin-server',
                         'spring-petclinic-api-gateway',
