@@ -29,8 +29,29 @@ pipeline {
             steps {
                 script {
                     dir("DevOps_Project1/spring-petclinic-config-server") {
-                        sh 'nohup mvn spring-boot:run > config-server.log 2>&1 &'
-                        sleep 10  // Wait for the server to start
+                    sh 'nohup mvn spring-boot:run > config-server.log 2>&1 &'
+                    sleep 5  // Wait a few seconds before checking status
+                    
+                    // Wait up to 60 seconds for Config Server to start
+                    def maxRetries = 12
+                    def retryCount = 0
+                    def serverUp = false
+    
+                    while (retryCount < maxRetries) {
+                        def status = sh(script: "curl -s -o /dev/null -w '%{http_code}' http://localhost:8888/actuator/health", returnStdout: true).trim()
+                        if (status == '200') {
+                            echo "Config Server is UP!"
+                            serverUp = true
+                            break
+                        } else {
+                            echo "Waiting for Config Server... (${retryCount + 1}/${maxRetries})"
+                            sleep 5
+                            retryCount++
+                        }
+                    }
+    
+                    if (!serverUp) {
+                        error("Config Server did NOT start within 60 seconds. Check logs.")
                     }
                 }
             }
@@ -41,9 +62,9 @@ pipeline {
                 script {
                     def configServerCheck = sh(script: "curl -s -o /dev/null -w '%{http_code}' ${CONFIG_SERVER_URL}/actuator/health", returnStdout: true).trim()
                     if (configServerCheck == '200') {
-                        echo "✅ Config Server is running. Proceeding with tests..."
+                        echo "Config Server is running. Proceeding with tests..."
                     } else {
-                        error("❌ Config Server is NOT running. Aborting tests.")
+                        error("Config Server is NOT running. Aborting tests.")
                     }
                 }
             }
