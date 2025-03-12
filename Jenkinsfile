@@ -13,7 +13,6 @@ pipeline {
             steps {
                 script {
                     sh '''
-                    # Clone the forked repo only if it doesn't exist
                     if [ ! -d DevOps_Project1 ]; then
                         git clone https://github.com/22127063/DevOps_Project1.git
                     fi
@@ -86,22 +85,16 @@ pipeline {
                                 if (!env.SERVICES_WITHOUT_TESTS.contains(service)) {
                                     try {
                                         sh '''
-                                        # Run tests with a fallback config if Config Server is unavailable
                                         mvn clean test -Dspring.cloud.config.enabled=false
                                         '''
-
                                         // Publish test results
                                         junit allowEmptyResults: true, testResults: '**/target/surefire-reports/*.xml'
 
-                                        // Publish coverage reports
-                                        jacoco(
-                                            execPattern: '**/target/jacoco.exec',
-                                            classPattern: '**/target/classes',
-                                            sourcePattern: '**/src/main/java',
-                                            exclusionPattern: '**/src/test*'
-                                        )
+                                        // Use Code Coverage API Plugin instead of deprecated JaCoCo plugin
+                                        publishCoverage adapters: [jacocoAdapter('**/target/site/jacoco/jacoco.xml')]
+
                                     } catch (Exception e) {
-                                        echo "⚠ Warning: Tests failed for ${service}, but continuing pipeline"
+                                        echo "Warning: Tests failed for ${service}, but continuing pipeline"
                                         currentBuild.result = 'UNSTABLE'
                                     }
                                 } else {
@@ -151,7 +144,6 @@ pipeline {
                             if (fileExists('pom.xml')) {
                                 echo "pom.xml found in ${service}, proceeding with build."
                                 sh '''
-                                # Build without requiring Config Server
                                 mvn package -DskipTests -Dspring.cloud.config.enabled=false
                                 '''
                                 archiveArtifacts artifacts: 'target/*.jar', fingerprint: true
