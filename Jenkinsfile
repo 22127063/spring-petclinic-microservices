@@ -5,16 +5,12 @@ pipeline {
         stage('Setup') {
             steps {
                 script {
-                    node {
-                        def mvnHome = tool name: 'Maven 3.8.1', type: 'maven'
-                        echo "Maven home: ${mvnHome}"
-                        }
-                    }
+                    def mvnHome = tool name: 'Maven 3.8.1', type: 'maven'
+                    echo "Maven home: ${mvnHome}"
                 }
             }
         }
-    }
-    stages {
+
         stage('Detect Changes') {
             agent { label 'agent-main' }
             steps {
