@@ -13,10 +13,11 @@ pipeline {
             steps {
                 script {
                     sh '''
-                    if [ ! -d spring-petclinic-microservices ]; then
-                        git clone https://github.com/22127063/DevOps_Project1.git
+                    # Clone the forked repo only if it doesn't exist
+                    if [ ! -d DevOps_Project1 ]; then
+                        git clone https://github.com/YOUR_USERNAME/DevOps_Project1.git
                     fi
-                    cd spring-petclinic-microservices
+                    cd DevOps_Project1
                     git pull origin main
                     '''
                 }
