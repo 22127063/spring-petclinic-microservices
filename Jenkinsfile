@@ -1,10 +1,19 @@
 pipeline {
-    agent none
+    agent any  // Ensures the pipeline runs on an available agent
 
-    environment {
-        MAVEN_HOME = tool 'Maven 3.8.6'
+    stages {
+        stage('Setup') {
+            steps {
+                script {
+                    node {
+                        def mvnHome = tool name: 'Maven 3.8.1', type: 'maven'
+                        echo "Maven home: ${mvnHome}"
+                        }
+                    }
+                }
+            }
+        }
     }
-
     stages {
         stage('Detect Changes') {
             agent { label 'agent-main' }
