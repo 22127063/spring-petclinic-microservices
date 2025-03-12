@@ -5,7 +5,7 @@ pipeline {
         stage('Setup') {
             steps {
                 script {
-                    def mvnHome = tool name: 'Maven 3.8.1', type: 'maven'
+                    def mvnHome = tool name: 'Maven 3.8.6', type: 'maven'
                     echo "Maven home: ${mvnHome}"
                 }
             }
