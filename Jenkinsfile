@@ -1,7 +1,7 @@
 pipeline {
     agent any  
     options {
-        buildDiscarder(logRotator(numToKeepStr: '5'))  // Keep last 5 builds only
+        buildDiscarder(logRotator(numToKeepStr: '5'))
     }
     environment {
         WORKSPACE = "${env.WORKSPACE}"
@@ -17,6 +17,7 @@ pipeline {
                         git clone https://github.com/22127063/spring-petclinic-microservices.git
                     fi
                     cd spring-petclinic-microservices
+                    git reset --hard HEAD
                     git pull origin main
                     '''
                 }
@@ -44,20 +45,19 @@ pipeline {
                         'spring-petclinic-visits-service'
                     ]
 
-                    env.CHANGED_SERVICES = ""
-                    def rebuildAll = false
-
+                    def changedServiceList = []
                     for (service in services) {
                         if (changedFiles.find { it.contains(service) }) {
-                            env.CHANGED_SERVICES = env.CHANGED_SERVICES + " " + service
+                            changedServiceList << service
                         }
                     }
 
                     def commonFiles = ["pom.xml", ".github", "docker-compose.yml", "Jenkinsfile"]
                     if (changedFiles.find { file -> commonFiles.any { file.contains(it) } }) {
-                        rebuildAll = true
-                        env.CHANGED_SERVICES = services.join(" ")
+                        changedServiceList = services
                     }
+
+                    env.CHANGED_SERVICES = changedServiceList.join(" ")
 
                     if (env.CHANGED_SERVICES == "") {
                         echo "No relevant changes detected. Skipping pipeline."
@@ -84,20 +84,14 @@ pipeline {
                                 echo "pom.xml found in ${service}"
                                 if (!env.SERVICES_WITHOUT_TESTS.contains(service)) {
                                     try {
-                                        sh '''
-                                        mvn clean test -Dspring.cloud.config.enabled=false
-                                        '''
-                                        
-                                        // Publish test results
-                                        junit allowEmptyResults: true, testResults: '**/target/surefire-reports/*.xml'
-
-                                        // Use Code Coverage API Plugin instead of deprecated JaCoCo plugin
-                                        publishCoverage adapters: [jacocoAdapter('**/target/site/jacoco/jacoco.xml')]
-
+                                        sh 'mvn clean test -Dspring.cloud.config.enabled=false'
                                     } catch (Exception e) {
                                         echo "Warning: Tests failed for ${service}, but continuing pipeline"
                                         currentBuild.result = 'UNSTABLE'
                                     }
+                                    
+                                    junit allowEmptyResults: true, testResults: '**/target/surefire-reports/*.xml'
+                                    publishCoverage adapters: [jacocoAdapter('**/target/site/jacoco/jacoco.xml')]
                                 } else {
                                     echo "Skipping tests for ${service} (No test folders)"
                                 }
@@ -125,7 +119,7 @@ pipeline {
                                 error("Test coverage below 70% for ${service}")
                             }
                         } else {
-                            echo "No coverage report found for ${service}. Skipping coverage check."
+                            error("Coverage report missing for ${service}")
                         }
                     }
                 }
@@ -158,7 +152,7 @@ pipeline {
 
     post {
         always {
-            cleanWs() // Clean workspace after each build to prevent leftover files
+            cleanWs()
         }
     }
 }
