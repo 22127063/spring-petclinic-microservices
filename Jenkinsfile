@@ -84,9 +84,8 @@ pipeline {
                                 echo "pom.xml found in ${service}"
                                 if (!env.SERVICES_WITHOUT_TESTS.contains(service)) {
                                     try {
-                                        sh '''
-                                        mvn clean test -Dspring.cloud.config.enabled=false
-                                        '''
+                                        sh 'mvn clean test'
+                                        
                                         // Publish test results
                                         junit allowEmptyResults: true, testResults: '**/target/surefire-reports/*.xml'
 
@@ -143,9 +142,7 @@ pipeline {
                         dir("DevOps_Project1/${service}") {
                             if (fileExists('pom.xml')) {
                                 echo "pom.xml found in ${service}, proceeding with build."
-                                sh '''
-                                mvn package -DskipTests -Dspring.cloud.config.enabled=false
-                                '''
+                                sh 'mvn package -DskipTests'
                                 archiveArtifacts artifacts: 'target/*.jar', fingerprint: true
                             } else {
                                 echo "pom.xml NOT FOUND in ${service}. Skipping build."
