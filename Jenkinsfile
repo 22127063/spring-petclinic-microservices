@@ -12,7 +12,14 @@ pipeline {
         stage('Checkout Code') {
             steps {
                 script {
-                    checkout scm
+                    sh '''
+                    if [ ! -d spring-petclinic-microservices ]; then
+                        git clone https://github.com/22127063/spring-petclinic-microservices.git
+                    fi
+                    cd spring-petclinic-microservices
+                    git reset --hard HEAD
+                    git pull origin main
+                    '''
                 }
             }
         }
@@ -22,9 +29,9 @@ pipeline {
                 script {
                     echo "Running pipeline for Branch: ${env.BRANCH_NAME}"
 
-                    def prevCommitExists = sh(script: "git rev-parse HEAD~1", returnStatus: true) == 0
+                    def prevCommitExists = sh(script: "cd spring-petclinic-microservices && git rev-parse HEAD~1", returnStatus: true) == 0
                     def changedFiles = prevCommitExists 
-                        ? sh(script: "git diff --name-only HEAD~1 HEAD", returnStdout: true).trim().split("\n")
+                        ? sh(script: "cd spring-petclinic-microservices && git diff --name-only HEAD~1 HEAD", returnStdout: true).trim().split("\n")
                         : []
 
                     def services = [
