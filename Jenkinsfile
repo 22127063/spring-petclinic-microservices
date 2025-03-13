@@ -22,9 +22,9 @@ pipeline {
                 script {
                     echo "Running pipeline for Branch: ${env.BRANCH_NAME}"
 
-                    def prevCommitExists = sh(script: "cd spring-petclinic-microservices && git rev-parse HEAD~1", returnStatus: true) == 0
+                    def prevCommitExists = sh(script: "git rev-parse HEAD~1", returnStatus: true) == 0
                     def changedFiles = prevCommitExists 
-                        ? sh(script: "cd spring-petclinic-microservices && git diff --name-only HEAD~1 HEAD", returnStdout: true).trim().split("\n")
+                        ? sh(script: "git diff --name-only HEAD~1 HEAD", returnStdout: true).trim().split("\n")
                         : []
 
                     def services = [
