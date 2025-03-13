@@ -45,21 +45,18 @@ pipeline {
                         'spring-petclinic-visits-service'
                     ]
 
-                    def changedServiceList = []
-                    for (service in services) {
-                        if (changedFiles.find { it.contains(service) }) {
-                            changedServiceList << service
-                        }
+                    def changedServiceList = services.findAll { service ->
+                        changedFiles.any { it.contains(service) }
                     }
 
                     def commonFiles = ["pom.xml", ".github", "docker-compose.yml", "Jenkinsfile"]
-                    if (changedFiles.find { file -> commonFiles.any { file.contains(it) } }) {
+                    if (changedFiles.any { file -> commonFiles.any { file.contains(it) } }) {
                         changedServiceList = services
                     }
 
                     env.CHANGED_SERVICES = changedServiceList.join(" ")
 
-                    if (env.CHANGED_SERVICES == "") {
+                    if (env.CHANGED_SERVICES.trim().isEmpty()) {
                         echo "No relevant changes detected. Skipping pipeline."
                         currentBuild.result = 'SUCCESS'
                         return
@@ -72,7 +69,7 @@ pipeline {
         
         stage('Test Services') {
             when {
-                expression { return env.CHANGED_SERVICES != "" }
+                expression { return !env.CHANGED_SERVICES.trim().isEmpty() }
             }
             steps {
                 script {
@@ -91,7 +88,7 @@ pipeline {
                                     }
                                     
                                     junit allowEmptyResults: true, testResults: '**/target/surefire-reports/*.xml'
-                                    publishCoverage adapters: [jacocoAdapter('**/target/site/jacoco/jacoco.xml')]
+                                    recordCoverage tools: [[jacoco: '**/target/site/jacoco/jacoco.xml']]
                                 } else {
                                     echo "Skipping tests for ${service} (No test folders)"
                                 }
@@ -106,7 +103,7 @@ pipeline {
 
         stage('Check Test Coverage') {
             when {
-                expression { env.CHANGED_SERVICES && env.CHANGED_SERVICES != 'main' }
+                expression { !env.CHANGED_SERVICES.trim().isEmpty() && env.BRANCH_NAME != 'main' }
             }
             steps {
                 script {
@@ -128,7 +125,7 @@ pipeline {
 
         stage('Build Services') {
             when {
-                expression { return env.CHANGED_SERVICES != "" }
+                expression { return !env.CHANGED_SERVICES.trim().isEmpty() }
             }
             steps {
                 script {
