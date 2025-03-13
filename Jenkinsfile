@@ -12,14 +12,7 @@ pipeline {
         stage('Checkout Code') {
             steps {
                 script {
-                    sh '''
-                    if [ ! -d spring-petclinic-microservices ]; then
-                        git clone https://github.com/22127063/spring-petclinic-microservices.git
-                    fi
-                    cd spring-petclinic-microservices
-                    git reset --hard HEAD
-                    git pull origin main
-                    '''
+                    checkout scm
                 }
             }
         }
