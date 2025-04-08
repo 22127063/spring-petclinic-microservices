@@ -18,24 +18,36 @@ pipeline {
     }
 
     stages {
-        stage('Checkout All Services') {
+        stage('Checkout Code') {
             steps {
                 script {
-                    // Clone full monorepo, default to 'main'
-                    git branch: 'main', url: "${REPO_URL}"
+                    // Clone the whole monorepo if not present
+                    if (!fileExists('spring-petclinic-microservices')) {
+                        sh 'git clone https://github.com/22127063/spring-petclinic-microservices.git'
+                    }
 
-                    // Checkout specific branches for services if needed
-                    def servicesWithBranches = [
-                        'spring-petclinic-customers-service': params.CUSTOMERS_BRANCH,
-                        'spring-petclinic-visits-service'   : params.VISITS_BRANCH,
-                        'spring-petclinic-vets-service'     : params.VETS_BRANCH,
-                        'spring-petclinic-genai-service'    : params.GENAI_BRANCH
-                    ]
+                    dir('spring-petclinic-microservices') {
+                        // Reset and pull main
+                        sh '''
+                            git reset --hard HEAD
+                            git checkout main
+                            git pull origin main
+                        '''
 
-                    servicesWithBranches.each { path, branch ->
-                        dir("spring-petclinic-microservices/${path}") {
-                            sh "git fetch origin ${branch}"
-                            sh "git checkout ${branch}"
+                        // Define service-branch mappings
+                        def servicesWithBranches = [
+                            'spring-petclinic-customers-service': params.CUSTOMERS_BRANCH,
+                            'spring-petclinic-visits-service'   : params.VISITS_BRANCH,
+                            'spring-petclinic-vets-service'     : params.VETS_BRANCH,
+                            'spring-petclinic-genai-service'    : params.GENAI_BRANCH
+                        ]
+
+                        // Checkout specific branches for services if needed
+                        servicesWithBranches.each { path, branch ->
+                            dir(path) {
+                                sh "git fetch origin ${branch}"
+                                sh "git checkout ${branch}"
+                            }
                         }
                     }
                 }
