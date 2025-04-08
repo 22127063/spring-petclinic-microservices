@@ -1,55 +1,25 @@
 pipeline {
-    agent any
+    agent any  
     options {
         buildDiscarder(logRotator(numToKeepStr: '5'))
     }
-
-    parameters {
-        string(name: 'CUSTOMERS_BRANCH', defaultValue: 'main', description: 'Branch for customers-service')
-        string(name: 'VISITS_BRANCH', defaultValue: 'main', description: 'Branch for visits-service')
-        string(name: 'VETS_BRANCH', defaultValue: 'main', description: 'Branch for vets-service')
-        string(name: 'GENAI_BRANCH', defaultValue: 'main', description: 'Branch for genai-service')
-    }
-
     environment {
+        WORKSPACE = "${env.WORKSPACE}"
         SERVICES_WITHOUT_TESTS = "spring-petclinic-admin-server spring-petclinic-genai-service"
-        REPO_URL = 'https://github.com/22127063/spring-petclinic-microservices.git'
-        IMAGE_NAME = '22127063/devops_prj2'
     }
 
     stages {
         stage('Checkout Code') {
             steps {
                 script {
-                    // Clone the whole monorepo if not present
-                    if (!fileExists('spring-petclinic-microservices')) {
-                        sh 'git clone https://github.com/22127063/spring-petclinic-microservices.git'
-                    }
-
-                    dir('spring-petclinic-microservices') {
-                        // Reset and pull main
-                        sh '''
-                            git reset --hard HEAD
-                            git checkout main
-                            git pull origin main
-                        '''
-
-                        // Define service-branch mappings
-                        def servicesWithBranches = [
-                            'spring-petclinic-customers-service': params.CUSTOMERS_BRANCH,
-                            'spring-petclinic-visits-service'   : params.VISITS_BRANCH,
-                            'spring-petclinic-vets-service'     : params.VETS_BRANCH,
-                            'spring-petclinic-genai-service'    : params.GENAI_BRANCH
-                        ]
-
-                        // Checkout specific branches for services if needed
-                        servicesWithBranches.each { path, branch ->
-                            dir(path) {
-                                sh "git fetch origin ${branch}"
-                                sh "git checkout ${branch}"
-                            }
-                        }
-                    }
+                    sh '''
+                    if [ ! -d spring-petclinic-microservices ]; then
+                        git clone https://github.com/22127063/spring-petclinic-microservices.git
+                    fi
+                    cd spring-petclinic-microservices
+                    git reset --hard HEAD
+                    git pull origin main
+                    '''
                 }
             }
         }
@@ -57,6 +27,8 @@ pipeline {
         stage('Detect Changes') {
             steps {
                 script {
+                    echo "Running pipeline for Branch: ${env.BRANCH_NAME}"
+
                     def prevCommitExists = sh(script: "cd spring-petclinic-microservices && git rev-parse HEAD~1", returnStatus: true) == 0
                     def changedFiles = prevCommitExists 
                         ? sh(script: "cd spring-petclinic-microservices && git diff --name-only HEAD~1 HEAD", returnStdout: true).trim().split("\n")
@@ -94,7 +66,7 @@ pipeline {
                 }
             }
         }
-
+        
         stage('Test Services') {
             when {
                 expression { return !env.CHANGED_SERVICES.trim().isEmpty() }
@@ -131,59 +103,20 @@ pipeline {
 
         stage('Check Test Coverage') {
             when {
-                expression {
-                    return !env.CHANGED_SERVICES.trim().isEmpty() &&
-                           params.CUSTOMERS_BRANCH != 'main' || params.VISITS_BRANCH != 'main' ||
-                           params.VETS_BRANCH != 'main' || params.GENAI_BRANCH != 'main'
-                }
+                expression { !env.CHANGED_SERVICES.trim().isEmpty() && env.BRANCH_NAME != 'main' }
             }
             steps {
                 script {
                     def serviceList = env.CHANGED_SERVICES.trim().split(" ")
                     for (service in serviceList) {
-                        def csvPath = "spring-petclinic-microservices/${service}/target/site/jacoco/jacoco.csv"
-                        if (fileExists(csvPath)) {
-                            def coverage = sh(script: "tail -1 ${csvPath} | cut -d',' -f4", returnStdout: true).trim()
+                        def servicePath = "spring-petclinic-microservices/${service}/target/site/jacoco/jacoco.csv"
+                        if (fileExists(servicePath)) {
+                            def coverage = sh(script: "tail -1 ${servicePath} | cut -d',' -f4", returnStdout: true).trim()
                             if (coverage.toInteger() < 70) {
                                 error("Test coverage below 70% for ${service}")
                             }
                         } else {
                             error("Coverage report missing for ${service}")
-                        }
-                    }
-                }
-            }
-        }
-
-        stage('Build and Push Docker Image') {
-            when {
-                expression { return !env.CHANGED_SERVICES.trim().isEmpty() }
-            }
-            steps {
-                script {
-                    def serviceBranches = [
-                        'spring-petclinic-customers-service': params.CUSTOMERS_BRANCH,
-                        'spring-petclinic-visits-service'   : params.VISITS_BRANCH,
-                        'spring-petclinic-vets-service'     : params.VETS_BRANCH,
-                        'spring-petclinic-genai-service'    : params.GENAI_BRANCH
-                    ]
-
-                    for (entry in serviceBranches) {
-                        def service = entry.key
-                        def branch = entry.value
-                        if (env.CHANGED_SERVICES.contains(service)) {
-                            def shortName = service.replace("spring-petclinic-", "")
-                            def commitId = sh(script: "cd spring-petclinic-microservices/${service} && git rev-parse --short HEAD", returnStdout: true).trim()
-                            def imageTag = "${IMAGE_NAME}/${shortName}:${commitId}"
-
-                            echo "Building Docker image for ${service}"
-                            sh """
-                                cd spring-petclinic-microservices/${service}
-                                docker build -t ${imageTag} .
-                                docker push ${imageTag}
-                            """
-                        } else {
-                            echo "Skipping Docker build for ${service}"
                         }
                     }
                 }
@@ -215,9 +148,8 @@ pipeline {
     }
 
     post {
-        always {
+        success {
             cleanWs()
         }
     }
 }
-
