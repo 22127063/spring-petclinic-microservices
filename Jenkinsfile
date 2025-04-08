@@ -94,20 +94,22 @@ pipeline {
                         echo "🔬 Testing service: ${service}"
                         dir("spring-petclinic-microservices/${service}") {
                             if (fileExists('pom.xml')) {
+                                echo "pom.xml found in ${service}"
                                 if (!env.SERVICES_WITHOUT_TESTS.contains(service)) {
                                     try {
                                         sh 'mvn clean test -Dspring.cloud.config.enabled=false'
                                     } catch (Exception e) {
-                                        echo "Tests failed for ${service}, continuing..."
+                                        echo "Warning: Tests failed for ${service}, but continuing pipeline"
                                         currentBuild.result = 'UNSTABLE'
                                     }
+                                    
                                     junit allowEmptyResults: true, testResults: '**/target/surefire-reports/*.xml'
                                     recordCoverage tools: [[jacoco: '**/target/site/jacoco/jacoco.xml']]
                                 } else {
-                                    echo "Skipping tests for ${service}"
+                                    echo "Skipping tests for ${service} (No test folders)"
                                 }
                             } else {
-                                echo "pom.xml not found in ${service}. Skipping tests."
+                                echo "pom.xml NOT FOUND in ${service}. Skipping tests."
                             }
                         }
                     }
@@ -176,26 +178,22 @@ pipeline {
             }
         }
 
-        stage('Build Remaining Services') {
+        stage('Build Services') {
             when {
                 expression { return !env.CHANGED_SERVICES.trim().isEmpty() }
             }
             steps {
                 script {
-                    def dockerServices = [
-                        'spring-petclinic-customers-service',
-                        'spring-petclinic-visits-service',
-                        'spring-petclinic-vets-service',
-                        'spring-petclinic-genai-service'
-                    ]
-                    def servicesToBuild = env.CHANGED_SERVICES.trim().split(" ").findAll { !dockerServices.contains(it) }
-
-                    for (service in servicesToBuild) {
-                        echo "🛠 Building service: ${service}"
+                    def serviceList = env.CHANGED_SERVICES.trim().split(" ")
+                    for (service in serviceList) {
+                        echo "Building service: ${service}"
                         dir("spring-petclinic-microservices/${service}") {
                             if (fileExists('pom.xml')) {
+                                echo "pom.xml found in ${service}, proceeding with build."
                                 sh 'mvn package -DskipTests -Dspring.cloud.config.enabled=false'
                                 archiveArtifacts artifacts: 'target/*.jar', fingerprint: true
+                            } else {
+                                echo "pom.xml NOT FOUND in ${service}. Skipping build."
                             }
                         }
                     }
@@ -205,8 +203,9 @@ pipeline {
     }
 
     post {
-        success {
+        always {
             cleanWs()
         }
     }
 }
+
