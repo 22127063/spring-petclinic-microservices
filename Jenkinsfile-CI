@@ -79,7 +79,7 @@ pipeline {
                         dir("spring-petclinic-microservices/${service}") {
                             if (fileExists('pom.xml')) {
                                 echo "pom.xml found in ${service}"
-                                if (!env.SERVICES_WITHOUT_TESTS.contains(service)) {
+                                if (!env.SERVICES_WITHOUT_TESTS.split(" ").contains(service)) {
                                     try {
                                         sh 'mvn clean test jacoco:report -Dspring.cloud.config.enabled=false'
                                     } catch (Exception e) {
@@ -88,7 +88,7 @@ pipeline {
                                     }
                                     
                                     junit allowEmptyResults: true, testResults: '**/target/surefire-reports/*.xml'
-                                    publishCoverage tools: [[jacoco: '**/target/site/jacoco/jacoco.xml']], skipPublishingChecks: true
+                                    recordCoverage tools: [[jacoco: '**/target/site/jacoco/jacoco.xml']], skipPublishingChecks: true
                                 } else {
                                     echo "Skipping tests for ${service} (No test folders)"
                                 }
