@@ -88,7 +88,16 @@ pipeline {
                                     }
                                     
                                     junit allowEmptyResults: true, testResults: '**/target/surefire-reports/*.xml'
-                                    recordCoverage tools: [[jacoco: '**/target/site/jacoco/jacoco.xml']], skipPublishingChecks: true
+                                    recordCoverage(
+                                        tools: [[$class: 'JacocoCoverageAdapter', pattern: '**/target/site/jacoco/jacoco.xml']],
+                                        id: 'jacoco',
+                                        name: 'JaCoCo Coverage',
+                                        sourceCodeRetention: 'EVERY_BUILD',
+                                        qualityGates: [
+                                            [threshold: 60.0, metric: 'LINE', baseline: 'PROJECT', unstable: true],
+                                            [threshold: 60.0, metric: 'BRANCH', baseline: 'PROJECT', unstable: true]
+                                        ]
+                                    )
                                 } else {
                                     echo "Skipping tests for ${service} (No test folders)"
                                 }
