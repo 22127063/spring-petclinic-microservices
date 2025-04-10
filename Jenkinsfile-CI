@@ -81,14 +81,14 @@ pipeline {
                                 echo "pom.xml found in ${service}"
                                 if (!env.SERVICES_WITHOUT_TESTS.contains(service)) {
                                     try {
-                                        sh 'mvn clean test -Dspring.cloud.config.enabled=false'
+                                        sh 'mvn clean test jacoco:report -Dspring.cloud.config.enabled=false'
                                     } catch (Exception e) {
                                         echo "Warning: Tests failed for ${service}, but continuing pipeline"
                                         currentBuild.result = 'UNSTABLE'
                                     }
                                     
                                     junit allowEmptyResults: true, testResults: '**/target/surefire-reports/*.xml'
-                                    recordCoverage tools: [[jacoco: '**/target/site/jacoco/jacoco.xml']]
+                                    recordCoverage tools: [[jacoco: '**/target/site/jacoco/jacoco.xml']], skipPublishingChecks: true
                                 } else {
                                     echo "Skipping tests for ${service} (No test folders)"
                                 }
