@@ -6,6 +6,10 @@ pipeline {
     environment {
         WORKSPACE = "${env.WORKSPACE}"
         SERVICES_WITHOUT_TESTS = "spring-petclinic-admin-server spring-petclinic-genai-service"
+        COMMIT_ID = sh(script: "cd spring-petclinic-microservices && git rev-parse --short HEAD", returnStdout: true).trim()
+        DOCKER_CREDENTIAL_ID = 'docker'  // ID bạn tạo trong Jenkins Credentials
+        DOCKER_REPO = '22127063'      // Đổi lại bằng Docker Hub của bạn
+
     }
 
     stages {
