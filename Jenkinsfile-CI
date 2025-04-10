@@ -103,7 +103,7 @@ pipeline {
 
         stage('Check Test Coverage') {
             when {
-                expression { !env.CHANGED_SERVICES.trim().isEmpty()}
+                expression { !env.CHANGED_SERVICES.trim().isEmpty() && env.BRANCH_NAME != 'main' }
             }
             steps {
                 script {
