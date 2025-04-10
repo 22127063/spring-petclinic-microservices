@@ -6,9 +6,6 @@ pipeline {
     environment {
         WORKSPACE = "${env.WORKSPACE}"
         SERVICES_WITHOUT_TESTS = "spring-petclinic-admin-server spring-petclinic-genai-service"
-        DOCKER_CREDENTIAL_ID = 'docker'  // ID bạn tạo trong Jenkins Credentials
-        DOCKER_REPO = '22127063'      // Đổi lại bằng Docker Hub của bạn
-
     }
 
     stages {
@@ -142,58 +139,6 @@ pipeline {
                                 archiveArtifacts artifacts: 'target/*.jar', fingerprint: true
                             } else {
                                 echo "pom.xml NOT FOUND in ${service}. Skipping build."
-                            }
-                        }
-                    }
-                }
-            }
-        }
-
-        stage('Set COMMIT_ID') {
-            steps {
-                script {
-                    env.COMMIT_ID = sh(script: "cd spring-petclinic-microservices && git rev-parse --short HEAD", returnStdout: true).trim()
-                    echo "Current commit ID: ${env.COMMIT_ID}"
-                }
-            }
-        }
-
-        stage('Build & Push Docker Images') {
-            when {
-                expression { return !env.CHANGED_SERVICES.trim().isEmpty() }
-            }
-            steps {
-                script {
-                    def serviceList = env.CHANGED_SERVICES.trim().split(" ")
-
-                    for (service in serviceList) {
-                        def imageName = "${DOCKER_REPO}/${service}"
-                        def imageTag = (env.BRANCH_NAME == "main") ? "latest" : COMMIT_ID
-
-                        echo "🚀 Building Docker image for ${service} with tag: ${imageTag}"
-
-                        dir("spring-petclinic-microservices/${service}") {
-                            if (fileExists('Dockerfile')) {
-                                sh """
-                                docker build -t ${imageName}:${imageTag} .
-                                """
-                                withCredentials([usernamePassword(credentialsId: DOCKER_CREDENTIAL_ID, usernameVariable: 'DOCKER_USER', passwordVariable: 'DOCKER_PASS')]) {
-                                    sh """
-                                    echo "$DOCKER_PASS" | docker login -u "$DOCKER_USER" --password-stdin
-                                    docker push ${imageName}:${imageTag}
-                                    docker logout
-                                    """
-                                }
-
-                                if (env.BRANCH_NAME == "main") {
-                                    echo "Also tagging ${imageName}:${imageTag} as latest"
-                                    sh """
-                                    docker tag ${imageName}:${imageTag} ${imageName}:latest
-                                    docker push ${imageName}:latest
-                                    """
-                                }
-                            } else {
-                                echo "Dockerfile NOT FOUND in ${service}. Skipping Docker build."
                             }
                         }
                     }
