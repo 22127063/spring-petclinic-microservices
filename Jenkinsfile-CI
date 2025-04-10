@@ -2,6 +2,8 @@ pipeline {
     agent any  
     options {
         buildDiscarder(logRotator(numToKeepStr: '5'))
+        timeout(time: 1, unit: 'HOURS') // Add timeout to prevent long-running builds
+        timestamps() // Add timestamps to logs for better traceability
     }
     environment {
         WORKSPACE = "${env.WORKSPACE}"
@@ -88,7 +90,9 @@ pipeline {
                                     }
                                     
                                     junit allowEmptyResults: true, testResults: '**/target/surefire-reports/*.xml'
-                                    recordCoverage tools: [[jacoco: '**/target/site/jacoco/jacoco.xml']]
+                                    publishCoverage adapters: [
+                                        jacocoAdapter('**/target/site/jacoco/jacoco.xml')
+                                    ], sourceFileResolver: sourceFiles('NEVER_STORE')
                                 } else {
                                     echo "Skipping tests for ${service} (No test folders)"
                                 }
@@ -150,6 +154,15 @@ pipeline {
     post {
         always {
             cleanWs()
+        }
+        success {
+            echo "Pipeline completed successfully."
+        }
+        unstable {
+            echo "Pipeline completed with warnings."
+        }
+        failure {
+            echo "Pipeline failed."
         }
     }
 }
