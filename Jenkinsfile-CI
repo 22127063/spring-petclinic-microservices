@@ -88,7 +88,7 @@ pipeline {
                                     }
                                     
                                     junit allowEmptyResults: true, testResults: '**/target/surefire-reports/*.xml'
-                                    recordCoverage tools: [jacoco(pattern: '**/target/site/jacoco/jacoco.xml')]
+                                    recordCoverage tools: [[jacoco: '**/target/site/jacoco/jacoco.xml']]
                                 } else {
                                     echo "Skipping tests for ${service} (No test folders)"
                                 }
