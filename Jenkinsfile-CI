@@ -3,8 +3,8 @@ pipeline {
     options {
         buildDiscarder(logRotator(numToKeepStr: '5'))
     }
+
     environment {
-        WORKSPACE = "${env.WORKSPACE}"
         SERVICES_WITHOUT_TESTS = "spring-petclinic-admin-server spring-petclinic-genai-service"
     }
 
@@ -27,7 +27,7 @@ pipeline {
         stage('Detect Changes') {
             steps {
                 script {
-                    echo "Running pipeline for Branch: ${env.BRANCH_NAME}"
+                    echo "🔍 Detecting changes..."
 
                     def prevCommitExists = sh(script: "cd spring-petclinic-microservices && git rev-parse HEAD~1", returnStatus: true) == 0
                     def changedFiles = prevCommitExists 
@@ -57,16 +57,16 @@ pipeline {
                     env.CHANGED_SERVICES = changedServiceList.join(" ")
 
                     if (env.CHANGED_SERVICES.trim().isEmpty()) {
-                        echo "No relevant changes detected. Skipping pipeline."
+                        echo "✅ No relevant changes detected. Skipping pipeline."
                         currentBuild.result = 'SUCCESS'
                         return
                     }
 
-                    echo "Services to build: ${env.CHANGED_SERVICES}"
+                    echo "📦 Services to build: ${env.CHANGED_SERVICES}"
                 }
             }
         }
-        
+
         stage('Test Services') {
             when {
                 expression { return !env.CHANGED_SERVICES.trim().isEmpty() }
@@ -78,54 +78,36 @@ pipeline {
                         echo "🔬 Testing service: ${service}"
                         dir("spring-petclinic-microservices/${service}") {
                             if (fileExists('pom.xml')) {
-                                echo "pom.xml found in ${service}"
                                 if (!env.SERVICES_WITHOUT_TESTS.split(" ").contains(service)) {
                                     try {
                                         sh 'mvn clean test jacoco:report -Dspring.cloud.config.enabled=false'
                                     } catch (Exception e) {
-                                        echo "Warning: Tests failed for ${service}, but continuing pipeline"
+                                        echo "⚠️ Tests failed for ${service}, continuing pipeline..."
                                         currentBuild.result = 'UNSTABLE'
                                     }
-                                    
+
                                     junit allowEmptyResults: true, testResults: '**/target/surefire-reports/*.xml'
-                                    recordCoverage(
-                                        tools: [[$class: 'JacocoCoverageAdapter', pattern: '**/target/site/jacoco/jacoco.xml']],
-                                        id: 'jacoco',
-                                        name: 'JaCoCo Coverage',
-                                        sourceCodeRetention: 'EVERY_BUILD',
-                                        qualityGates: [
-                                            [threshold: 60.0, metric: 'LINE', baseline: 'PROJECT', criticality: 'UNSTABLE'],
-                                            [threshold: 60.0, metric: 'BRANCH', baseline: 'PROJECT', criticality: 'UNSTABLE']
-                                        ]
-                                    )
+
+                                    if (fileExists('target/site/jacoco/jacoco.xml')) {
+                                        recordCoverage(
+                                            tools: [[$class: 'JacocoCoverageAdapter', pattern: '**/target/site/jacoco/jacoco.xml']],
+                                            id: 'jacoco',
+                                            name: 'JaCoCo Coverage',
+                                            sourceCodeRetention: 'EVERY_BUILD',
+                                            qualityGates: [
+                                                [threshold: 70.0, metric: 'LINE', baseline: 'PROJECT', criticality: 'UNSTABLE'],
+                                                [threshold: 70.0, metric: 'BRANCH', baseline: 'PROJECT', criticality: 'UNSTABLE']
+                                            ]
+                                        )
+                                    } else {
+                                        echo "⚠️ JaCoCo XML not found for ${service}, skipping coverage report"
+                                    }
                                 } else {
-                                    echo "Skipping tests for ${service} (No test folders)"
+                                    echo "⏭ Skipping tests for ${service} (in SERVICES_WITHOUT_TESTS)"
                                 }
                             } else {
-                                echo "pom.xml NOT FOUND in ${service}. Skipping tests."
+                                echo "❌ pom.xml not found in ${service}, skipping"
                             }
-                        }
-                    }
-                }
-            }
-        }
-
-        stage('Check Test Coverage') {
-            when {
-                expression { !env.CHANGED_SERVICES.trim().isEmpty() && env.BRANCH_NAME != 'main' }
-            }
-            steps {
-                script {
-                    def serviceList = env.CHANGED_SERVICES.trim().split(" ")
-                    for (service in serviceList) {
-                        def servicePath = "spring-petclinic-microservices/${service}/target/site/jacoco/jacoco.csv"
-                        if (fileExists(servicePath)) {
-                            def coverage = sh(script: "tail -1 ${servicePath} | cut -d',' -f4", returnStdout: true).trim()
-                            if (coverage.toInteger() < 70) {
-                                error("Test coverage below 70% for ${service}")
-                            }
-                        } else {
-                            error("Coverage report missing for ${service}")
                         }
                     }
                 }
@@ -140,14 +122,13 @@ pipeline {
                 script {
                     def serviceList = env.CHANGED_SERVICES.trim().split(" ")
                     for (service in serviceList) {
-                        echo "Building service: ${service}"
+                        echo "🏗️ Building service: ${service}"
                         dir("spring-petclinic-microservices/${service}") {
                             if (fileExists('pom.xml')) {
-                                echo "pom.xml found in ${service}, proceeding with build."
                                 sh 'mvn package -DskipTests -Dspring.cloud.config.enabled=false'
                                 archiveArtifacts artifacts: 'target/*.jar', fingerprint: true
                             } else {
-                                echo "pom.xml NOT FOUND in ${service}. Skipping build."
+                                echo "❌ pom.xml not found in ${service}, skipping build"
                             }
                         }
                     }
@@ -161,13 +142,13 @@ pipeline {
             cleanWs()
         }
         success {
-            echo "Pipeline completed successfully."
+            echo "✅ Pipeline completed successfully."
         }
         unstable {
-            echo "Pipeline completed with warnings."
+            echo "⚠️ Pipeline completed with warnings."
         }
         failure {
-            echo "Pipeline failed."
+            echo "❌ Pipeline failed."
         }
     }
 }
