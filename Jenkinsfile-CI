@@ -145,6 +145,49 @@ pipeline {
                 }
             }
         }
+
+        stage('Build & Push Docker Images') {
+            when {
+                expression { return !env.CHANGED_SERVICES.trim().isEmpty() }
+            }
+            steps {
+                script {
+                    def serviceList = env.CHANGED_SERVICES.trim().split(" ")
+
+                    for (service in serviceList) {
+                        def imageName = "${DOCKER_REPO}/${service}"
+                        def imageTag = (env.BRANCH_NAME == "main") ? "latest" : COMMIT_ID
+
+                        echo "🚀 Building Docker image for ${service} with tag: ${imageTag}"
+
+                        dir("spring-petclinic-microservices/${service}") {
+                            if (fileExists('Dockerfile')) {
+                                sh """
+                                docker build -t ${imageName}:${imageTag} .
+                                """
+                                withCredentials([usernamePassword(credentialsId: DOCKER_CREDENTIAL_ID, usernameVariable: 'DOCKER_USER', passwordVariable: 'DOCKER_PASS')]) {
+                                    sh """
+                                    echo "$DOCKER_PASS" | docker login -u "$DOCKER_USER" --password-stdin
+                                    docker push ${imageName}:${imageTag}
+                                    docker logout
+                                    """
+                                }
+
+                                if (env.BRANCH_NAME == "main") {
+                                    echo "Also tagging ${imageName}:${imageTag} as latest"
+                                    sh """
+                                    docker tag ${imageName}:${imageTag} ${imageName}:latest
+                                    docker push ${imageName}:latest
+                                    """
+                                }
+                            } else {
+                                echo "Dockerfile NOT FOUND in ${service}. Skipping Docker build."
+                            }
+                        }
+                    }
+                }
+            }
+        }
     }
 
     post {
