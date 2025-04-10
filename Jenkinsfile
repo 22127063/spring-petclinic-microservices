@@ -57,7 +57,6 @@ pipeline {
         stage('Detect Changes') {
             steps {
                 script {
-                    echo "Running pipeline for Branch: ${env.BRANCH_NAME}"
 
                     def prevCommitExists = sh(script: "cd spring-petclinic-microservices && git rev-parse HEAD~1", returnStatus: true) == 0
                     def changedFiles = prevCommitExists 
@@ -182,11 +181,9 @@ pipeline {
             }
         }
 
-        stage('Build and Push Docker Image') {
+        stage('Build Docker Images') {
             when {
-                expression {
-                    !env.CHANGED_SERVICES.trim().isEmpty()
-                }
+                expression { !env.CHANGED_SERVICES.trim().isEmpty() }
             }
             steps {
                 script {
@@ -203,19 +200,16 @@ pipeline {
                         if (env.CHANGED_SERVICES.contains(service)) {
                             def shortName = service.replace("spring-petclinic-", "")
                             def commitId = sh(script: "cd spring-petclinic-microservices/${service} && git rev-parse --short HEAD", returnStdout: true).trim()
-                            def imageTag = "${IMAGE_NAME}/${shortName}:${commitId}"
+                            
+                            def tagSuffix = (branch != 'main') ? "-${branch}" : ""
+                            def imageTag = "${IMAGE_NAME}/${shortName}:${commitId}${tagSuffix}"
+                            def dockerfilePath = "spring-petclinic-microservices/${service}"
 
-                            withCredentials([usernamePassword(credentialsId: 'docker', usernameVariable: 'DOCKER_USER', passwordVariable: 'DOCKER_PASS')]) {
-                                sh """
-                                    echo $DOCKER_PASS | docker login -u $DOCKER_USER --password-stdin
-                                """
-                            }
-
-                            echo "Building Docker image for ${service}"
+                            echo "🏗️ Building Docker image for ${service} with tag ${imageTag}"
                             sh """
-                                cd spring-petclinic-microservices/${service}
+                                cd ${dockerfilePath}
                                 docker build -t ${imageTag} .
-                                docker push ${imageTag}
+                                docker save ${imageTag} -o ${env.WORKSPACE}/${shortName}.tar
                             """
                         } else {
                             echo "Skipping Docker build for ${service}"
@@ -224,6 +218,47 @@ pipeline {
                 }
             }
         }
+
+        stage('Push Docker Images') {
+            when {
+                expression { !env.CHANGED_SERVICES.trim().isEmpty() }
+            }
+            steps {
+                script {
+                    def serviceBranches = [
+                        'spring-petclinic-customers-service': params.CUSTOMERS_BRANCH,
+                        'spring-petclinic-visits-service'   : params.VISITS_BRANCH,
+                        'spring-petclinic-vets-service'     : params.VETS_BRANCH,
+                        'spring-petclinic-genai-service'    : params.GENAI_BRANCH
+                    ]
+
+                    withCredentials([usernamePassword(credentialsId: 'docker', usernameVariable: 'DOCKER_USER', passwordVariable: 'DOCKER_PASS')]) {
+                        sh "echo \$DOCKER_PASS | docker login -u \$DOCKER_USER --password-stdin"
+                    }
+
+                    for (entry in serviceBranches) {
+                        def service = entry.key
+                        def branch = entry.value
+                        if (env.CHANGED_SERVICES.contains(service)) {
+                            def shortName = service.replace("spring-petclinic-", "")
+                            def commitId = sh(script: "cd spring-petclinic-microservices/${service} && git rev-parse --short HEAD", returnStdout: true).trim()
+
+                            def tagSuffix = (branch != 'main') ? "-${branch}" : ""
+                            def imageTag = "${IMAGE_NAME}/${shortName}:${commitId}${tagSuffix}"
+
+                            echo "🚀 Loading and pushing Docker image for ${service} with tag ${imageTag}"
+                            sh """
+                                docker load -i ${env.WORKSPACE}/${shortName}.tar
+                                docker push ${imageTag}
+                            """
+                        } else {
+                            echo "Skipping Docker push for ${service}"
+                        }
+                    }
+                }
+            }
+        }
+
     }
 
     post {
