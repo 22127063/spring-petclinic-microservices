@@ -5,10 +5,9 @@ pipeline {
     }
     environment {
         REPO_URL = 'https://github.com/22127063/spring-petclinic-microservices.git'
-        IMAGE_NAME = '22127063/devops_prj2'
         DEPLOY_PATH = 'k8s/deployment'
         SERVICES_WITHOUT_TESTS = "spring-petclinic-admin-server spring-petclinic-genai-service"
-        NAME_SPACE = 'petclinic'
+        NAMESPACE = 'petclinic'
     }
 
     parameters {
@@ -116,7 +115,7 @@ pipeline {
                         ).trim()
 
                         def tag = (branch != 'main') ? "-${branch}" : ""
-                        def imageTag = "${IMAGE_NAME}/${svc}:${commitId}${tag}"
+                        def imageTag = "22127063/spring-petclinic-${svc}-service:${commitHash}"
 
                         echo "🚀 Deploying ${svc}-service with image: ${imageTag}"
 
@@ -124,7 +123,7 @@ pipeline {
 
                         // 🔹 Ensure namespace exists
                         sh """
-                            kubectl get namespace ${namespace} || kubectl create namespace ${namespace}
+                            kubectl get namespace ${NAMESPACE} || kubectl create namespace ${NAMESPACE}
                         """
 
                         // Replace image inline using sed
