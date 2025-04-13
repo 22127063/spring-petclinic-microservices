@@ -8,6 +8,7 @@ pipeline {
         IMAGE_NAME = '22127063/devops_prj2'
         DEPLOY_PATH = 'k8s/deployment'
         SERVICES_WITHOUT_TESTS = "spring-petclinic-admin-server spring-petclinic-genai-service"
+        NAME_SPACE = 'petclinic'
     }
 
     parameters {
@@ -120,6 +121,11 @@ pipeline {
                         echo "🚀 Deploying ${svc}-service with image: ${imageTag}"
 
                         def yamlPath = "spring-petclinic-microservices/${DEPLOY_PATH}/${svc}.yaml"
+
+                        // 🔹 Ensure namespace exists
+                        sh """
+                            kubectl get namespace ${namespace} || kubectl create namespace ${namespace}
+                        """
 
                         // Replace image inline using sed
                         sh """
