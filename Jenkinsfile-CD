@@ -7,6 +7,7 @@ pipeline {
         REPO_URL = 'https://github.com/22127063/spring-petclinic-microservices.git'
         IMAGE_NAME = '22127063/devops_prj2'
         DEPLOY_PATH = 'k8s/deployment'
+        SERVICES_WITHOUT_TESTS = "spring-petclinic-admin-server spring-petclinic-genai-service"
     }
 
     parameters {
@@ -18,6 +19,64 @@ pipeline {
     }
 
     stages {
+        stage('Checkout Code') {
+            steps {
+                script {
+                    sh '''
+                    if [ ! -d spring-petclinic-microservices ]; then
+                        git clone https://github.com/22127063/spring-petclinic-microservices.git
+                    fi
+                    cd spring-petclinic-microservices
+                    git reset --hard HEAD
+                    git pull origin main
+                    '''
+                }
+            }
+        }
+
+        stage('Detect Changes') {
+            steps {
+                script {
+                    echo "Running pipeline for Branch: ${env.BRANCH_NAME}"
+
+                    def prevCommitExists = sh(script: "cd spring-petclinic-microservices && git rev-parse HEAD~1", returnStatus: true) == 0
+                    def changedFiles = prevCommitExists 
+                        ? sh(script: "cd spring-petclinic-microservices && git diff --name-only HEAD~1 HEAD", returnStdout: true).trim().split("\n")
+                        : []
+
+                    def services = [
+                        'spring-petclinic-admin-server',
+                        'spring-petclinic-api-gateway',
+                        'spring-petclinic-config-server',
+                        'spring-petclinic-customers-service',
+                        'spring-petclinic-discovery-server',
+                        'spring-petclinic-genai-service',
+                        'spring-petclinic-vets-service',
+                        'spring-petclinic-visits-service'
+                    ]
+
+                    def changedServiceList = services.findAll { service ->
+                        changedFiles.any { it.contains(service) }
+                    }
+
+                    def commonFiles = ["pom.xml", ".github", "docker-compose.yml", "Jenkinsfile-CI", "Jenkinsfile-CD", "Dockerfile"]
+                    if (changedFiles.any { file -> commonFiles.any { file.contains(it) } }) {
+                        changedServiceList = services
+                    }
+
+                    env.CHANGED_SERVICES = changedServiceList.join(" ")
+
+                    if (env.CHANGED_SERVICES.trim().isEmpty()) {
+                        echo "No relevant changes detected. Skipping pipeline."
+                        currentBuild.result = 'SUCCESS'
+                        return
+                    }
+
+                    echo "Services to build: ${env.CHANGED_SERVICES}"
+                }
+            }
+        }
+
         stage('Checkout Deployment Code') {
             steps {
                 script {
