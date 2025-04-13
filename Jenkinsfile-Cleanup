@@ -1,0 +1,59 @@
+pipeline {
+    agent any
+
+    environment {
+        K8S_NAMESPACE = "petclinic"
+    }
+
+    stages {
+        stage('Xóa deployment và service') {
+            steps {
+                script {
+                    def services = [
+                        "spring-petclinic-admin-server",
+                        "spring-petclinic-api-gateway",
+                        "spring-petclinic-config-server",
+                        "spring-petclinic-customers-service",
+                        "spring-petclinic-discovery-server",
+                        "spring-petclinic-genai-service",
+                        "spring-petclinic-vets-service",
+                        "spring-petclinic-visits-service"
+                    ]
+
+                    for (service in services) {
+                        sh """
+                        kubectl delete deployment ${service} -n ${K8S_NAMESPACE} --ignore-not-found=true
+                        kubectl delete service ${service} -n ${K8S_NAMESPACE} --ignore-not-found=true
+                        kubectl delete configmap ${service}-config -n ${K8S_NAMESPACE} --ignore-not-found=true
+                        """
+                    }
+                }
+            }
+        }
+
+        stage('Xóa ingress') {
+            steps {
+                sh 'kubectl delete ingress petclinic-ingress -n $K8S_NAMESPACE --ignore-not-found=true'
+            }
+        }
+
+        stage('Xóa namespace (tùy chọn)') {
+            when {
+                expression { return params.DELETE_NAMESPACE }
+            }
+            steps {
+                sh 'kubectl delete namespace $K8S_NAMESPACE --ignore-not-found=true'
+            }
+        }
+    }
+
+    parameters {
+        booleanParam(name: 'DELETE_NAMESPACE', defaultValue: false, description: 'Xóa luôn namespace?')
+    }
+
+    post {
+        always {
+            echo 'Job xóa triển khai hoàn tất!'
+        }
+    }
+}

@@ -1,0 +1,10 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: customers-config
+  labels:
+    app: customers
+  namespace: default
+data:
+  VISITS_SERVICE_URL: "http://visits-service:8082"
+  VETS_SERVICE_URL: "http://vets-service:8083"

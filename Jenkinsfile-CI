@@ -146,7 +146,7 @@ pipeline {
             }
         }
 
-                stage('Docker Build & Push') {
+        stage('Docker Build & Push') {
             when {
                 expression { return !env.CHANGED_SERVICES?.trim().isEmpty() }
             }

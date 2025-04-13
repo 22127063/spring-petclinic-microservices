@@ -1,0 +1,33 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: visits-deployment
+  namespace: petclinic
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: visits
+  template:
+    metadata:
+      labels:
+        app: visits
+    spec:
+      containers:
+        - name: visits
+          image: 22127063/spring-petclinic-visits-service:latest
+          ports:
+            - containerPort: 8082
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: visits-service
+spec:
+  type: NodePort
+  selector:
+    app: visits
+  ports:
+    - port: 8082
+      targetPort: 8082
+      nodePort: 30082
