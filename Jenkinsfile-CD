@@ -103,6 +103,8 @@ pipeline {
 
                     def services = ['customers', 'visits', 'vets', 'genai']
 
+                    def commitHash = sh(script: "cd spring-petclinic-microservices && git rev-parse --short HEAD", returnStdout: true).trim()
+
                     for (svc in services) {
                         def branch = (svc == params.TARGET_SERVICE) ? branches[svc] : "main"
                         def repoPath = "spring-petclinic-microservices/spring-petclinic-${svc}-service"
