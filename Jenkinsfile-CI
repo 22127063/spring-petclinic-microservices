@@ -49,7 +49,7 @@ pipeline {
                         changedFiles.any { it.contains(service) }
                     }
 
-                    def commonFiles = ["pom.xml", ".github", "docker-compose.yml", "Jenkinsfile-CI", "Jenkinsfile-CD", "Dockerfile"]
+                    def commonFiles = ["pom.xml", ".github", "docker-compose.yml", "Jenkinsfile-CI", "Dockerfile"]
                     if (changedFiles.any { file -> commonFiles.any { file.contains(it) } }) {
                         changedServiceList = services
                     }
