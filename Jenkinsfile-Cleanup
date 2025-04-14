@@ -16,7 +16,16 @@ pipeline {
         stage('Xóa Deployment, Service, ConfigMap') {
             steps {
                 script {
-
+                    def services = [
+                        "admin-server",
+                        "api-gateway",
+                        "config-server",
+                        "customers",
+                        "discovery-server",
+                        "genai",
+                        "vets",
+                        "visits"
+                    ]
 
                     for (svc in services) {
                         def fullname = "${svc}-deployment"
