@@ -88,6 +88,13 @@ pipeline {
                         // Ensure namespace exists
                         sh "kubectl get namespace ${NAMESPACE} || kubectl create namespace ${NAMESPACE}"
 
+                        // 🔧 Apply ConfigMap nếu có
+                        def configmapPath = "spring-petclinic-microservices/k8s/configmap/${svc}-config.yaml"
+                        if (fileExists(configmapPath)) {
+                            echo "📦 Applying configmap for ${svc}-service"
+                            sh "kubectl apply -f ${configmapPath} -n ${NAMESPACE}"
+                        }
+
                         // Only replace image line if not using 'latest' (i.e. YAML already has :latest)
                         if (params.IMAGE_TAG_MODE == 'commit-hash') {
                             sh "sed -i 's|image: .*|image: ${imageTag}|' ${yamlPath}"
