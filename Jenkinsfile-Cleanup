@@ -1,6 +1,9 @@
 pipeline {
     agent { label 'agent-main' }
 
+    options {
+        buildDiscarder(logRotator(numToKeepStr: '5'))
+    }
     environment {
         K8S_NAMESPACE = "petclinic"
     }
