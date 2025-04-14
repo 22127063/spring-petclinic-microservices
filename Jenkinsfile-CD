@@ -92,6 +92,12 @@ pipeline {
             }
         }
 
+        stage('Apply Ingress') {
+            steps {
+                sh 'kubectl apply -f spring-petclinic-microservices/k8s/ingress/ingress.yaml'
+            }
+        }
+
         stage('Deploy to Kubernetes') {
             steps {
                 script {
