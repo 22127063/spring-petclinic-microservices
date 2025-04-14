@@ -17,7 +17,7 @@ pipeline {
         string(name: 'VETS_BRANCH', defaultValue: 'main', description: 'Branch for vets-service')
         string(name: 'GENAI_BRANCH', defaultValue: 'main', description: 'Branch for genai-service')
         choice(name: 'TARGET_SERVICE', choices: ['customers', 'visits', 'vets', 'genai'], description: 'Service to deploy from feature branch')
-        choice(name: 'IMAGE_TAG_MODE', choices: ['commit-hash', 'latest'], description: 'Chọn image tag để deploy')
+        choice(name: 'IMAGE_TAG_MODE', choices: ['latest', 'commit-hash'], description: 'Chọn image tag để deploy')
     }
 
     stages {
