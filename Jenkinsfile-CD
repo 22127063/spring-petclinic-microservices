@@ -1,5 +1,6 @@
 pipeline {
-    agent {agent-main}
+    agent { label 'agent-main' }
+
     options {
         buildDiscarder(logRotator(numToKeepStr: '5'))
     }
