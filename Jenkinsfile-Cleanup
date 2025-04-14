@@ -16,22 +16,13 @@ pipeline {
         stage('Xóa Deployment, Service, ConfigMap') {
             steps {
                 script {
-                    def services = [
-                        "admin-server",
-                        "api-gateway",
-                        "config-server",
-                        "customers",
-                        "discovery-server",
-                        "genai",
-                        "vets",
-                        "visits"
-                    ]
+
 
                     for (svc in services) {
                         def fullname = "${svc}-deployment"
                         sh """
                             kubectl delete deployment ${fullname} -n ${K8S_NAMESPACE} --ignore-not-found=true
-                            kubectl delete service ${fullname} -n ${K8S_NAMESPACE} --ignore-not-found=true
+                            kubectl delete svc --all -n ${K8S_NAMESPACE} --ignore-not-found=true
                             kubectl delete configmap ${svc}-config -n ${K8S_NAMESPACE} --ignore-not-found=true
                         """
                     }
