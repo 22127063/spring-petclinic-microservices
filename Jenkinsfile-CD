@@ -124,7 +124,7 @@ pipeline {
                         ).trim()
 
                         def tag = (branch != 'main') ? "-${branch}" : ""
-                        def imageTag = "22127063/spring-petclinic-${svc}:${commitHash}"
+                        def imageTag = "22127063/spring-petclinic-${svc}-service:${commitHash}"
 
                         echo "🚀 Deploying ${svc}-service with image: ${imageTag}"
 
