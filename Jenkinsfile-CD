@@ -35,49 +35,6 @@ pipeline {
             }
         }
 
-        stage('Detect Changes') {
-            steps {
-                script {
-                    echo "Running pipeline for Branch: ${env.BRANCH_NAME}"
-
-                    def prevCommitExists = sh(script: "cd spring-petclinic-microservices && git rev-parse HEAD~1", returnStatus: true) == 0
-                    def changedFiles = prevCommitExists 
-                        ? sh(script: "cd spring-petclinic-microservices && git diff --name-only HEAD~1 HEAD", returnStdout: true).trim().split("\n")
-                        : []
-
-                    def services = [
-                        'spring-petclinic-admin-server',
-                        'spring-petclinic-api-gateway',
-                        'spring-petclinic-config-server',
-                        'spring-petclinic-customers-service',
-                        'spring-petclinic-discovery-server',
-                        'spring-petclinic-genai-service',
-                        'spring-petclinic-vets-service',
-                        'spring-petclinic-visits-service'
-                    ]
-
-                    def changedServiceList = services.findAll { service ->
-                        changedFiles.any { it.contains(service) }
-                    }
-
-                    def commonFiles = ["pom.xml", ".github", "docker-compose.yml", "Jenkinsfile-CD", "Dockerfile"]
-                    if (changedFiles.any { file -> commonFiles.any { file.contains(it) } }) {
-                        changedServiceList = services
-                    }
-
-                    env.CHANGED_SERVICES = changedServiceList.join(" ")
-
-                    if (env.CHANGED_SERVICES.trim().isEmpty()) {
-                        echo "No relevant changes detected. Skipping pipeline."
-                        currentBuild.result = 'SUCCESS'
-                        return
-                    }
-
-                    echo "Services to build: ${env.CHANGED_SERVICES}"
-                }
-            }
-        }
-
         stage('Checkout Deployment Code') {
             steps {
                 script {
@@ -110,7 +67,11 @@ pipeline {
 
                     def services = ['customers', 'visits', 'vets', 'genai']
 
-                    def commitHash = sh(script: "cd spring-petclinic-microservices && git rev-parse --short HEAD", returnStdout: true).trim()
+                    // Lấy commit hash nếu cần
+                    def commitHash = ""
+                    if (params.IMAGE_TAG_MODE == 'commit-hash') {
+                        commitHash = sh(script: "cd spring-petclinic-microservices && git rev-parse --short HEAD", returnStdout: true).trim()
+                    }
 
                     for (svc in services) {
                         def branch = (svc == params.TARGET_SERVICE) ? branches[svc] : "main"
@@ -118,28 +79,22 @@ pipeline {
 
                         sh "cd ${repoPath} && git fetch origin ${branch}"
 
-                        def commitId = sh(
-                            script: "cd ${repoPath} && git rev-parse --short origin/${branch}",
-                            returnStdout: true
-                        ).trim()
-
-                        def tag = (branch != 'main') ? "-${branch}" : ""
-                        def imageTag = "22127063/spring-petclinic-${svc}-service:${commitHash}"
+                        def tag = (params.IMAGE_TAG_MODE == 'commit-hash') ? commitHash : "latest"
+                        def imageTag = "22127063/spring-petclinic-${svc}-service:${tag}"
+                        def yamlPath = "spring-petclinic-microservices/${DEPLOY_PATH}/${svc}.yaml"
 
                         echo "🚀 Deploying ${svc}-service with image: ${imageTag}"
 
-                        def yamlPath = "spring-petclinic-microservices/${DEPLOY_PATH}/${svc}.yaml"
+                        // Ensure namespace exists
+                        sh "kubectl get namespace ${NAMESPACE} || kubectl create namespace ${NAMESPACE}"
 
-                        // 🔹 Ensure namespace exists
-                        sh """
-                            kubectl get namespace ${NAMESPACE} || kubectl create namespace ${NAMESPACE}
-                        """
+                        // Only replace image line if not using 'latest' (i.e. YAML already has :latest)
+                        if (params.IMAGE_TAG_MODE == 'commit-hash') {
+                            sh "sed -i 's|image: .*|image: ${imageTag}|' ${yamlPath}"
+                        }
 
-                        // Replace image inline using sed
-                        sh """
-                            sed -i 's|image: .*|image: ${imageTag}|' ${yamlPath}
-                            kubectl apply -f ${yamlPath}
-                        """
+                        // Apply deployment YAML
+                        sh "kubectl apply -f ${yamlPath}"
                     }
                 }
             }
