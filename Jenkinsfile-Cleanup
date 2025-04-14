@@ -17,15 +17,15 @@ pipeline {
                         "admin-server",
                         "api-gateway",
                         "config-server",
-                        "customers-service",
+                        "customers",
                         "discovery-server",
-                        "genai-service",
-                        "vets-service",
-                        "visits-service"
+                        "genai",
+                        "vets",
+                        "visits"
                     ]
 
                     for (svc in services) {
-                        def fullname = "spring-petclinic-${svc}"
+                        def fullname = "${svc}-deployment"
                         sh """
                             kubectl delete deployment ${fullname} -n ${K8S_NAMESPACE} --ignore-not-found=true
                             kubectl delete service ${fullname} -n ${K8S_NAMESPACE} --ignore-not-found=true
