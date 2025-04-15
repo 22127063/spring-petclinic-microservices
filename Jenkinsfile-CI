@@ -168,7 +168,7 @@ pipeline {
 
                     def servicePorts = [
                         "spring-petclinic-admin-server": 9090,
-                        "spring-petclinic-api-gateway": 8080,
+                        "spring-petclinic-api-gateway": 8090,
                         "spring-petclinic-config-server": 8888,
                         "spring-petclinic-customers-service": 8081,
                         "spring-petclinic-discovery-server": 8761,

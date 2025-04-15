@@ -29,6 +29,6 @@ spec:
   selector:
     app: api-gateway
   ports:
-    - port: 8080
+    - port: 8090
       targetPort: 8080
       nodePort: 30080
