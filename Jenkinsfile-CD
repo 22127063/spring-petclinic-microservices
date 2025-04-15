@@ -70,7 +70,7 @@ pipeline {
 
                     for (svc in services) {
                         def branch = (svc == params.TARGET_SERVICE) ? branches[svc] : "main"
-                        def repoPath = "spring-petclinic-microservices/spring-petclinic-${svc}-service"
+                        def repoPath = "spring-petclinic-microservices/spring-petclinic-${svc}"
 
                         sh "cd ${repoPath} && git fetch origin ${branch}"
 
