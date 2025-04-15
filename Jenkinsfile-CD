@@ -60,7 +60,7 @@ pipeline {
                         'genai'    : params.GENAI_BRANCH
                     ]
 
-                    def services = ['customers', 'visits', 'vets', 'genai']
+                    def services = ['customers-service', 'visits-service', 'vets-service', 'genai-service', 'api-gateway']
 
                     // Lấy commit hash nếu cần
                     def commitHash = ""
@@ -75,7 +75,7 @@ pipeline {
                         sh "cd ${repoPath} && git fetch origin ${branch}"
 
                         def tag = (params.IMAGE_TAG_MODE == 'commit-hash') ? commitHash : "latest"
-                        def imageTag = "22127063/spring-petclinic-${svc}-service:${tag}"
+                        def imageTag = "22127063/spring-petclinic-${svc}:${tag}"
                         def yamlPath = "spring-petclinic-microservices/${DEPLOY_PATH}/${svc}.yaml"
 
                         echo "🚀 Deploying ${svc}-service with image: ${imageTag}"
