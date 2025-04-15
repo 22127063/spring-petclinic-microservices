@@ -14,3 +14,13 @@ spring:
     activate:
       on-profile: docker
     import: configserver:http://config-server:8888
+
+---
+spring:
+  sql:
+    init:
+      mode: always
+  datasource:
+    url: jdbc:mysql://mysql:3306/petclinic
+    username: admin
+    password: petclinic
