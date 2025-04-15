@@ -50,12 +50,6 @@ pipeline {
             }
         }
 
-        stage('Apply Ingress') {
-            steps {
-                sh 'kubectl apply -f spring-petclinic-microservices/k8s/ingress/ingress.yaml'
-            }
-        }
-
         stage('Deploy to Kubernetes') {
             steps {
                 script {
@@ -88,6 +82,9 @@ pipeline {
 
                         // Ensure namespace exists
                         sh "kubectl get namespace ${NAMESPACE} || kubectl create namespace ${NAMESPACE}"
+
+                        // 🔧 Apply Ingress nếu có
+                        sh 'kubectl apply -f spring-petclinic-microservices/k8s/ingress/ingress.yaml'
 
                         // 🔧 Apply ConfigMap nếu có
                         def configmapPath = "spring-petclinic-microservices/k8s/configmap/${svc}-config.yaml"
