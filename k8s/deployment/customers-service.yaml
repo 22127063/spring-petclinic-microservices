@@ -20,7 +20,7 @@ spec:
             - containerPort: 8081
           envFrom:
             - configMapRef:
-                name: customers-config
+                name: customers-service-config
 ---
 apiVersion: v1
 kind: Service
