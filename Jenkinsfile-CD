@@ -89,7 +89,7 @@ pipeline {
                         // 🔧 Apply ConfigMap nếu có
                         def configmapPath = "spring-petclinic-microservices/k8s/configmap/${svc}-config.yaml"
                         if (fileExists(configmapPath)) {
-                            echo "📦 Applying configmap for ${svc}-service"
+                            echo "📦 Applying configmap for ${svc}"
                             sh "kubectl apply -f ${configmapPath} -n ${NAMESPACE}"
                         }
 
