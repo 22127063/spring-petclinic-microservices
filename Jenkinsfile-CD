@@ -6,6 +6,7 @@ pipeline {
     }
     environment {
         REPO_URL = 'https://github.com/22127063/spring-petclinic-microservices.git'
+        CONFIG_REPO_URL = 'https://github.com/spring-petclinic/spring-petclinic-microservices-config.git'  // Add config repository URL
         DEPLOY_PATH = 'k8s/deployment'
         SERVICES_WITHOUT_TESTS = "spring-petclinic-admin-server spring-petclinic-genai-service"
         NAMESPACE = 'petclinic'
@@ -60,7 +61,7 @@ pipeline {
                         'genai'    : params.GENAI_BRANCH
                     ]
 
-                    def services = ['customers-service', 'visits-service', 'vets-service', 'genai-service', 'api-gateway']
+                    def services = ['customers-service', 'visits-service', 'vets-service', 'genai-service', 'api-gateway', 'admin-server', 'discovery-server', 'config-server']
 
                     // Lấy commit hash nếu cần
                     def commitHash = ""
@@ -69,12 +70,12 @@ pipeline {
                     }
 
                     // Deploy MySQL nếu chưa tồn tại
-                    def mysqlYaml = "spring-petclinic-microservices/k8s/deployment/mysql.yaml"
-                    if (fileExists(mysqlYaml)) {
-                        echo "🛢 Deploying MySQL database"
-                        sh "kubectl apply -f ${mysqlYaml} -n ${NAMESPACE}"
-                    }
-        
+                    // def mysqlYaml = "spring-petclinic-microservices/k8s/deployment/mysql.yaml"
+                    // if (fileExists(mysqlYaml)) {
+                    //     echo "🛢 Deploying MySQL database"
+                    //     sh "kubectl apply -f ${mysqlYaml} -n ${NAMESPACE}"
+                    // }
+
                     for (svc in services) {
                         def branch = (svc.contains(params.TARGET_SERVICE)) ? branches[params.TARGET_SERVICE] : "main"
                         def repoPath = "spring-petclinic-microservices/spring-petclinic-${svc}"
@@ -93,12 +94,12 @@ pipeline {
                         // 🔧 Apply Ingress nếu có
                         sh "kubectl apply -f spring-petclinic-microservices/k8s/ingress/ingress.yaml -n ${NAMESPACE}"
 
-                        // 🔧 Apply ConfigMap nếu có
-                        def configmapPath = "spring-petclinic-microservices/k8s/configmap/${svc}-config.yaml"
-                        if (fileExists(configmapPath)) {
-                            echo "📦 Applying configmap for ${svc}"
-                            sh "kubectl apply -f ${configmapPath} -n ${NAMESPACE}"
-                        }
+                        // 🔧 Apply ConfigMap từ config repository nếu có
+                        // def configmapPath = "spring-petclinic-microservices-config/${svc}.yml"
+                        // if (fileExists(configmapPath)) {
+                        //     echo "📦 Applying configmap for ${svc} from config repo"
+                        //     sh "kubectl apply -f ${configmapPath} -n ${NAMESPACE}"
+                        // }
 
                         // Only replace image line if not using 'latest' (i.e. YAML already has :latest)
                         if (params.IMAGE_TAG_MODE == 'commit-hash') {

@@ -7,11 +7,6 @@ spring:
     cache-names: vets
   profiles:
     active: production
-  sql:
-    init:
-      mode: always
-      data-locations: classpath:db/mysql/data.sql
-      schema-locations: classpath:db/mysql/schema.sql
 
 ---
 spring:
@@ -19,7 +14,3 @@ spring:
     activate:
       on-profile: docker
     import: configserver:http://config-server:8888
-  datasource:
-    url: jdbc:mysql://mysql:3306/petclinic
-    username: root
-    password: root
