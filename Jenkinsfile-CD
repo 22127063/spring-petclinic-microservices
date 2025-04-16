@@ -46,15 +46,23 @@ pipeline {
                         'genai'    : params.GENAI_BRANCH
                     ]
 
+                    // def services = [
+                    //     'customers-service',
+                    //     'visits-service',
+                    //     'vets-service',
+                    //     'genai-service',
+                    //     'api-gateway',
+                    //     'admin-server',
+                    //     'discovery-server',
+                    //     'config-server',
+                    // ]
+
                     def services = [
                         'customers-service',
                         'visits-service',
                         'vets-service',
                         'genai-service',
-                        'api-gateway',
-                        'admin-server',
-                        'discovery-server',
-                        'config-server',
+                        'api-gateway'
                     ]
 
                     // Lấy commit hash nếu cần

@@ -4,60 +4,57 @@ metadata:
   name: petclinic-ingress
   namespace: petclinic
   annotations:
-    nginx.ingress.kubernetes.io/rewrite-target: /
+    nginx.ingress.kubernetes.io/rewrite-target: "/"
 spec:
+  ingressClassName: nginx
   rules:
-  - host: api.petclinic.local
-    http:
-      paths:
-      - path: /
-        pathType: Prefix
-        backend:
-          service:
-            name: api-gateway-service
-            port:
-              number: 8090
-
-  - host: customers.petclinic.local
-    http:
-      paths:
-      - path: /
-        pathType: Prefix
-        backend:
-          service:
-            name: customers-service
-            port:
-              number: 8081
-
-  - host: visits.petclinic.local
-    http:
-      paths:
-      - path: /
-        pathType: Prefix
-        backend:
-          service:
-            name: visits-service
-            port:
-              number: 8082
-
-  - host: vets.petclinic.local
-    http:
-      paths:
-      - path: /
-        pathType: Prefix
-        backend:
-          service:
-            name: vets-service
-            port:
-              number: 8083
-
-  - host: genai.petclinic.local
-    http:
-      paths:
-      - path: /
-        pathType: Prefix
-        backend:
-          service:
-            name: genai-service
-            port:
-              number: 8084
+    - host: customers.petclinic.local
+      http:
+        paths:
+          - path: "/customers"
+            pathType: Prefix
+            backend:
+              service:
+                name: customers-service
+                port:
+                  number: 8081
+    - host: vets.petclinic.local
+      http:
+        paths:
+          - path: "/vets"
+            pathType: Prefix
+            backend:
+              service:
+                name: vets-service
+                port:
+                  number: 8083
+    - host: visits.petclinic.local
+      http:
+        paths:
+          - path: "/visits"
+            pathType: Prefix
+            backend:
+              service:
+                name: visits-service
+                port:
+                  number: 8082
+    - host: genai.petclinic.local
+      http:
+        paths:
+          - path: "/genai"
+            pathType: Prefix
+            backend:
+              service:
+                name: genai-service
+                port:
+                  number: 8084
+    - host: api.petclinic.local
+      http:
+        paths:
+          - path: "/"
+            pathType: Prefix
+            backend:
+              service:
+                name: api-gateway-service
+                port:
+                  number: 8090

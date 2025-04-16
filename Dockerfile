@@ -30,7 +30,7 @@ ARG EXPOSED_PORT=8080
 EXPOSE ${EXPOSED_PORT}
 
 # Active profile
-ENV SPRING_PROFILES_ACTIVE=docker
+ENV SPRING_PROFILES_ACTIVE docker,mysql
 
 # Copy layers in cache-friendly order
 COPY --from=builder /application/dependencies/ ./
