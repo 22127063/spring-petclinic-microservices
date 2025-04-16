@@ -69,10 +69,10 @@ pipeline {
                     }
 
                     for (svc in services) {
-                        def branch = (svc == params.TARGET_SERVICE) ? branches[svc] : "main"
+                        def branch = (svc.contains(params.TARGET_SERVICE)) ? branches[params.TARGET_SERVICE] : "main"
                         def repoPath = "spring-petclinic-microservices/spring-petclinic-${svc}"
 
-                        sh "cd ${repoPath} && git fetch origin ${branch}"
+                        sh "cd ${repoPath} && git fetch origin ${branch} && git checkout ${branch}"
 
                         def tag = (params.IMAGE_TAG_MODE == 'commit-hash') ? commitHash : "latest"
                         def imageTag = "22127063/spring-petclinic-${svc}:${tag}"
