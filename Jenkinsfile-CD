@@ -95,12 +95,12 @@ pipeline {
                         // 🔧 Apply Ingress nếu có
                         sh "kubectl apply -f spring-petclinic-microservices/k8s/ingress/ingress.yaml -n ${NAMESPACE}"
 
-                        // 🔧 Apply ConfigMap nếu có
-                        // def configmapPath = "spring-petclinic-microservices/k8s/configmap/${svc}-config.yaml"
-                        // if (fileExists(configmapPath)) {
-                        //     echo "📦 Applying configmap for ${svc}"
-                        //     sh "kubectl apply -f ${configmapPath} -n ${NAMESPACE}"
-                        // }
+                        🔧 Apply ConfigMap nếu có
+                        def configmapPath = "spring-petclinic-microservices/k8s/config/${svc}-config.yaml"
+                        if (fileExists(configmapPath)) {
+                            echo "📦 Applying configmap for ${svc}"
+                            sh "kubectl apply -f ${configmapPath} -n ${NAMESPACE}"
+                        }
 
                         // Only replace image line if not using 'latest' (i.e. YAML already has :latest)
                         if (params.IMAGE_TAG_MODE == 'commit-hash') {

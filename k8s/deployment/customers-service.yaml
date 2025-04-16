@@ -18,18 +18,9 @@ spec:
           image: 22127063/spring-petclinic-customers-service:latest
           ports:
             - containerPort: 8081
-          env:
-            - name: SPRING_PROFILES_ACTIVE
-              value: docker
-            - name: SPRING_CLOUD_CONFIG_URI
-              value: http://config-server:8888
-            - name: CONFIG_SERVER_URI
-              value: http://config-server:8888
-            # Thêm các biến môi trường khác nếu cần
           envFrom:
             - configMapRef:
-                name: customers-service
-
+                name: customers-service-config
 ---
 apiVersion: v1
 kind: Service
