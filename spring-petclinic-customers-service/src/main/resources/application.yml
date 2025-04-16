@@ -10,8 +10,13 @@ spring:
       schema-locations: classpath:db/mysql/schema.sql
 
 ---
+
 spring:
   config:
     activate:
       on-profile: docker
-    import: configserver:http://config-server:8888
+    import: configserver:http://config-server:8888/
+  datasource:
+    url: jdbc:mysql://mysql:3306/petclinic
+    username: root
+    password: root
