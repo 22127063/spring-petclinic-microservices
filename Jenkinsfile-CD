@@ -84,7 +84,7 @@ pipeline {
                         sh "kubectl get namespace ${NAMESPACE} || kubectl create namespace ${NAMESPACE}"
 
                         // 🔧 Apply Ingress nếu có
-                        sh 'kubectl apply -f spring-petclinic-microservices/k8s/ingress/ingress.yaml'
+                        sh "kubectl apply -f spring-petclinic-microservices/k8s/ingress/ingress.yaml -n ${NAMESPACE}"
 
                         // 🔧 Apply ConfigMap nếu có
                         def configmapPath = "spring-petclinic-microservices/k8s/configmap/${svc}-config.yaml"

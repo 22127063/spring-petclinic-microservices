@@ -1,0 +1,10 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: vets-service-config
+  namespace: petclinic
+  labels:
+    app: vets
+data:
+  VISITS_SERVICE_URL: "http://visits-service:8082"
+  CUSTOMERS_SERVICE_URL: "http://customers-service:8081"
