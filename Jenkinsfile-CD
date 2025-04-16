@@ -36,20 +36,6 @@ pipeline {
             }
         }
 
-        stage('Checkout Deployment Code') {
-            steps {
-                script {
-                    if (!fileExists('spring-petclinic-microservices')) {
-                        sh "git clone ${REPO_URL}"
-                    }
-
-                    dir('spring-petclinic-microservices') {
-                        sh 'git reset --hard HEAD && git checkout main && git pull origin main'
-                    }
-                }
-            }
-        }
-
         stage('Deploy to Kubernetes') {
             steps {
                 script {
@@ -92,17 +78,17 @@ pipeline {
                         // Ensure namespace exists
                         sh "kubectl get namespace ${NAMESPACE} || kubectl create namespace ${NAMESPACE}"
 
-                        // 🔧 Apply Ingress nếu có
+                        // Apply Ingress if needed
                         sh "kubectl apply -f spring-petclinic-microservices/k8s/ingress/ingress.yaml -n ${NAMESPACE}"
 
-                        🔧 Apply ConfigMap nếu có
+                        // Apply ConfigMap if defined for the service
                         def configmapPath = "spring-petclinic-microservices/k8s/config/${svc}-config.yaml"
                         if (fileExists(configmapPath)) {
                             echo "📦 Applying configmap for ${svc}"
                             sh "kubectl apply -f ${configmapPath} -n ${NAMESPACE}"
                         }
 
-                        // Only replace image line if not using 'latest' (i.e. YAML already has :latest)
+                        // Only replace image line if not using 'latest'
                         if (params.IMAGE_TAG_MODE == 'commit-hash') {
                             sh "sed -i 's|image: .*|image: ${imageTag}|' ${yamlPath}"
                         }
