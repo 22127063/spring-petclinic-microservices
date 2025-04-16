@@ -3,7 +3,11 @@ spring:
     name: visits-service
   config:
     import: optional:configserver:${CONFIG_SERVER_URL:http://localhost:8888/}
-
+  sql:
+    init:
+      mode: always
+      data-locations: classpath:db/mysql/data.sql
+      schema-locations: classpath:db/mysql/schema.sql
 
 ---
 spring:
