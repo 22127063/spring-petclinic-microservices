@@ -6,5 +6,8 @@ metadata:
     app: customers
   namespace: petclinic
 data:
-  VISITS_SERVICE_URL: "http://visits-service:8082"
-  VETS_SERVICE_URL: "http://vets-service:8083"
+  SPRING_DATASOURCE_URL: jdbc:mysql://mysql:3306/petclinic
+  SPRING_DATASOURCE_USERNAME: root
+  SPRING_DATASOURCE_PASSWORD: root
+  VISITS_SERVICE_URL: http://visits-service:8082
+  VETS_SERVICE_URL: http://vets-service:8083
