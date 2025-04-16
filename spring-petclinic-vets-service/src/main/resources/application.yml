@@ -2,7 +2,7 @@ spring:
   application:
     name: vets-service
   config:
-    import: optional:configserver:${CONFIG_SERVER_URL:http://config-server:8888}
+    import: optional:configserver:${CONFIG_SERVER_URL:http://localhost:8888/}
   cache:
     cache-names: vets
   profiles:
@@ -14,3 +14,8 @@ spring:
     activate:
       on-profile: docker
     import: configserver:http://config-server:8888
+  datasource:
+    url: jdbc:mysql://mysql.petclinic.svc.cluster.local:3306/petclinic
+    username: root
+    password: petclinic
+    driver-class-name: com.mysql.cj.jdbc.Driver
