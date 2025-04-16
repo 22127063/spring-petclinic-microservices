@@ -68,6 +68,13 @@ pipeline {
                         commitHash = sh(script: "cd spring-petclinic-microservices && git rev-parse --short HEAD", returnStdout: true).trim()
                     }
 
+                    // Deploy MySQL nếu chưa tồn tại
+                    def mysqlYaml = "spring-petclinic-microservices/k8s/deployment/mysql.yaml"
+                    if (fileExists(mysqlYaml)) {
+                        echo "🛢 Deploying MySQL database"
+                        sh "kubectl apply -f ${mysqlYaml} -n ${NAMESPACE}"
+                    }
+        
                     for (svc in services) {
                         def branch = (svc.contains(params.TARGET_SERVICE)) ? branches[params.TARGET_SERVICE] : "main"
                         def repoPath = "spring-petclinic-microservices/spring-petclinic-${svc}"
