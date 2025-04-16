@@ -55,15 +55,8 @@ pipeline {
                         'admin-server',
                         'discovery-server',
                         'config-server',
+                        'mysql',
                     ]
-
-                    // def services = [
-                    //     'customers-service',
-                    //     'visits-service',
-                    //     'vets-service',
-                    //     'genai-service',
-                    //     'api-gateway'
-                    // ]
 
                     // Lấy commit hash nếu cần
                     def commitHash = ""
