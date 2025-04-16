@@ -14,7 +14,7 @@ ARG ARTIFACT_NAME=spring-petclinic-${SERVICE_NAME}-${VERSION}
 ARG CUSTOM_JAR_NAME
 ENV FINAL_JAR_NAME=${CUSTOM_JAR_NAME:-${ARTIFACT_NAME}}
 
-COPY ${FINAL_JAR_NAME}.jar app.jar
+COPY spring-petclinic-${SERVICE_NAME}/target/*.jar app.jar
 
 RUN java -Djarmode=layertools -jar app.jar extract
 
