@@ -209,6 +209,7 @@ pipeline {
                                 docker push 22127063/${service}:latest
                                 docker rmi ${imageTag} || true
                                 docker rmi 22127063/${service}:latest || true
+                                docker image prune -f
                                 """
                             } else {
                                 echo "❌ Dockerfile not found for ${service}, skipping build."
