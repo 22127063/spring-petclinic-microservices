@@ -82,11 +82,11 @@ pipeline {
                         sh "kubectl apply -f spring-petclinic-microservices/k8s/ingress/ingress.yaml -n ${NAMESPACE}"
 
                         // Apply ConfigMap if defined for the service
-                        def configmapPath = "spring-petclinic-microservices/k8s/configmap/${svc}-config.yaml"
-                        if (fileExists(configmapPath)) {
-                            echo "📦 Applying configmap for ${svc}"
-                            sh "kubectl apply -f ${configmapPath} -n ${NAMESPACE}"
-                        }
+                        sh "kubectl apply -f spring-petclinic-microservices/k8s/configmap.yaml -n ${NAMESPACE}"
+
+                        sh "kubectl apply -f spring-petclinic-microservices/k8s/secret.yaml -n ${NAMESPACE}"
+
+                        sh "helm upgrade pdb bitnami/mysql -n spring-petclinic -f k8s/mysql/values.yml --version 6.14.4 --install"
 
                         // Only replace image line if not using 'latest'
                         if (params.IMAGE_TAG_MODE == 'commit-hash') {

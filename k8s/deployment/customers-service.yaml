@@ -1,36 +1,56 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: customers-deployment
+  name: customers
   namespace: petclinic
+  labels:
+    app: petclinic
 spec:
   replicas: 1
   selector:
     matchLabels:
-      app: customers
+      app: petclinic
+      tier: customers
   template:
     metadata:
       labels:
-        app: customers
+        app: petclinic
+        tier: customers
     spec:
       containers:
-        - name: customers
+        - name: app
           image: 22127063/spring-petclinic-customers-service:latest
-          ports:
-            - containerPort: 8081
+          imagePullPolicy: Always
+          resources:
+            requests:
+              memory: 1Gi
+            limits:
+              memory: 1Gi
           envFrom:
             - configMapRef:
-                name: customers-service-config
+                name: app
+            - secretRef:
+                name: database
+          env:
+            - name: SPRING_DATASOURCE_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  key: mysql-password
+                  name: pdb-mysql
+          ports:
+            - name: http
+              containerPort: 8081
 ---
 apiVersion: v1
 kind: Service
 metadata:
-  name: customers-service
+  name: customers
   namespace: petclinic
 spec:
   type: NodePort
   selector:
-    app: customers
+    app: petclinic
+    tier: customers
   ports:
     - port: 8081
       targetPort: 8080
