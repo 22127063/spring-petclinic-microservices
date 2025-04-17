@@ -7,17 +7,13 @@ metadata:
     nginx.ingress.kubernetes.io/rewrite-target: /
 spec:
   rules:
-    {{- range $svcName, $svc := .Values.services }}
-      {{- if $svc.enabled }}
-    - host: {{ $svcName }}.{{ .Values.namespace }}.svc.cluster.local
+    - host: {{ .Release.Name }}.{{ .Values.namespace }}.svc.cluster.local
       http:
         paths:
-        - path: /
-          pathType: Prefix
-          backend:
-            service:
-              name: {{ .Release.Name }}-{{ .Chart.Name }}-{{ .Values.namespace }}-{{ $svcName }}
-              port:
-                number: {{ $svc.port }}
-      {{- end }}
-    {{- end }}
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: {{ .Release.Name }}-{{ .Chart.Name }}-{{ .Values.namespace }}-{{ .Release.Name }}
+                port:
+                  number: {{ .Values.services.customers-service.port }}
