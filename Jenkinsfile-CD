@@ -81,12 +81,16 @@ pipeline {
                         // Apply Ingress if needed
                         sh "kubectl apply -f spring-petclinic-microservices/k8s/ingress/ingress.yaml -n ${NAMESPACE}"
 
-                        // Apply ConfigMap if defined for the service
+                        // Apply ConfigMap and Secret
                         sh "kubectl apply -f spring-petclinic-microservices/k8s/configmap.yaml -n ${NAMESPACE}"
-
                         sh "kubectl apply -f spring-petclinic-microservices/k8s/secret.yaml -n ${NAMESPACE}"
 
-                        sh "helm upgrade pdb bitnami/mysql -n spring-petclinic -f k8s/mysql/values.yml --version 6.14.4 --install"
+                        // Add and update Bitnami repo before installing MySQL
+                        sh '''
+                        helm repo add bitnami https://charts.bitnami.com/bitnami || true
+                        helm repo update
+                        helm upgrade pdb bitnami/mysql -n spring-petclinic -f spring-petclinic-microservices/k8s/mysql/values.yml --version 6.14.4 --install
+                        '''
 
                         // Only replace image line if not using 'latest'
                         if (params.IMAGE_TAG_MODE == 'commit-hash') {
