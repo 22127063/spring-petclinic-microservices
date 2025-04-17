@@ -7,13 +7,6 @@ spring:
     cache-names: vets
   profiles:
     active: production
-
----
-spring:
-  config:
-    activate:
-      on-profile: docker
-    import: configserver:http://config-server:8888
   datasource:
     url: jdbc:hsqldb:mem:testdb
     driver-class-name: org.hsqldb.jdbcDriver
@@ -25,3 +18,10 @@ spring:
     init:
       mode: always
       data-locations: classpath:db/hsqldb/data.sql
+
+---
+spring:
+  config:
+    activate:
+      on-profile: docker
+    import: configserver:http://config-server:8888
