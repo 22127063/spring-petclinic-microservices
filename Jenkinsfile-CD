@@ -64,7 +64,7 @@ pipeline {
                     }
 
                     for (svc in services) {
-                        def branch = (svc.contains(params.TARGET_SERVICE)) ? branches[params.TARGET_SERVICE] : "main"
+                        def branch = (branches.containsKey(params.TARGET_SERVICE) && svc.contains(params.TARGET_SERVICE)) ? branches[params.TARGET_SERVICE] : "main"
                         def repoPath = "spring-petclinic-microservices/spring-petclinic-${svc}"
 
                         sh "cd ${repoPath} && git fetch origin ${branch} && git checkout ${branch}"
