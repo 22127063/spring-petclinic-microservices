@@ -8,7 +8,7 @@ metadata:
     nginx.ingress.kubernetes.io/rewrite-target: /
 spec:
   rules:
-    - host: {{ $name }}.{{ $.Release.Namespace }}.svc.cluster.local
+    - host: {{ $name }}.petclinic.local
       http:
         paths:
           - path: /
