@@ -6,6 +6,9 @@ metadata:
 spec:
   accessModes:
     - ReadWriteOnce
+  hostPath:
+    path: "/mnt/data/mysql"  # Local path on your node
+  persistentVolumeReclaimPolicy: Retain
   resources:
     requests:
       storage: 1Gi
@@ -13,7 +16,7 @@ spec:
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: mysql
+  name: mysql-deployment
   namespace: petclinic
 spec:
   selector:
