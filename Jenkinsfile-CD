@@ -47,14 +47,14 @@ pipeline {
                     ]
 
                     def services = [
+                        'config-server',
+                        'discovery-server',
+                        'admin-server',
                         'customers-service',
                         'visits-service',
                         'vets-service',
                         'genai-service',
-                        'api-gateway',
-                        'admin-server',
-                        'discovery-server',
-                        'config-server',
+                        'api-gateway'
                     ]
 
                     // Lấy commit hash nếu cần
