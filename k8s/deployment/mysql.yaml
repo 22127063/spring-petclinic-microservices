@@ -1,3 +1,18 @@
+# PersistentVolume
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: mysql-pv
+spec:
+  capacity:
+    storage: 1Gi
+  accessModes:
+    - ReadWriteOnce
+  hostPath:
+    path: "/mnt/data/mysql"  # Make sure this path exists on your node
+  persistentVolumeReclaimPolicy: Retain
+---
+# PersistentVolumeClaim
 apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
@@ -6,13 +21,11 @@ metadata:
 spec:
   accessModes:
     - ReadWriteOnce
-  hostPath:
-    path: "/mnt/data/mysql"  # Local path on your node
-  persistentVolumeReclaimPolicy: Retain
   resources:
     requests:
       storage: 1Gi
 ---
+# Deployment
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -46,6 +59,7 @@ spec:
           persistentVolumeClaim:
             claimName: mysql-pvc
 ---
+# Service
 apiVersion: v1
 kind: Service
 metadata:
