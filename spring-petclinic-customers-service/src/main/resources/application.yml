@@ -3,18 +3,6 @@ spring:
     name: customers-service
   config:
     import: optional:configserver:${CONFIG_SERVER_URL:http://localhost:8888/}
-  datasource:
-    url: jdbc:hsqldb:mem:testdb
-    driver-class-name: org.hsqldb.jdbcDriver
-    username: sa
-    password:
-  hibernate:
-    ddl-auto: update
-  sql:
-    init:
-      mode: always
-      data-locations: classpath:db/hsqldb/data.sql
-
 
 ---
 spring:

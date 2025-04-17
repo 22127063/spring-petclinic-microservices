@@ -7,17 +7,6 @@ spring:
     cache-names: vets
   profiles:
     active: production
-  datasource:
-    url: jdbc:hsqldb:mem:testdb
-    driver-class-name: org.hsqldb.jdbcDriver
-    username: sa
-    password:
-  hibernate:
-    ddl-auto: update
-  sql:
-    init:
-      mode: always
-      data-locations: classpath:db/hsqldb/data.sql
 
 ---
 spring:
