@@ -2,7 +2,7 @@ apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
   name: ingress
-  namespace: spring-petclinic
+  namespace: petclinic
 spec:
   rules:
     - host: petclinic.local.com
