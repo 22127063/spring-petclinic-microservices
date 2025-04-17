@@ -1,5 +1,5 @@
 apiVersion: v2
-name: spring-petclinic
+name: spring-petclinic-microservices
 description: A Helm chart for deploying Spring Petclinic microservices
 version: 0.1.0
 appVersion: "1.0"
