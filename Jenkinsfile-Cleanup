@@ -28,7 +28,7 @@ pipeline {
                     ]
 
                     for (svc in services) {
-                        def fullname = "${svc}-deployment"
+                        def fullname = "${svc}"
                         sh """
                             kubectl delete deployment ${fullname} -n ${K8S_NAMESPACE} --ignore-not-found=true
                             kubectl delete svc --all -n ${K8S_NAMESPACE} --ignore-not-found=true
