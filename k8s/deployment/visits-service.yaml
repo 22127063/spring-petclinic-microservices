@@ -15,12 +15,12 @@ spec:
     metadata:
       labels:
         app: petclinic
-      tier: visits
+        tier: visits
     spec:
       containers:
         - name: app
           image: 22127063/spring-petclinic-visits-service:latest
-          magePullPolicy: Always
+          imagePullPolicy: Always
           resources:
             requests:
               memory: 1Gi
