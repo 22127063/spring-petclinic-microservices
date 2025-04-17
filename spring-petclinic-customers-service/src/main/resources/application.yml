@@ -11,24 +11,3 @@ spring:
     activate:
       on-profile: docker
     import: configserver:http://config-server:8888
-
----
-spring:
-  datasource:
-    initialization-mode: always
-    schema: classpath*:db/hsqldb/schema.sql
-    data: classpath*:db/hsqldb/data.sql
-  jpa:
-    open-in-view: false
-    hibernate:
-      ddl-auto: none
-  zipkin:
-    enabled: false
----
-spring:
-  config:
-    activate:
-      on-profile: mysql
-  datasource:
-    schema: classpath*:db/mysql/schema.sql
-    data: classpath*:db/mysql/data.sql

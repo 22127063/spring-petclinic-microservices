@@ -16,7 +16,11 @@ pipeline {
         string(name: 'VISITS_BRANCH', defaultValue: 'main', description: 'Branch for visits-service')
         string(name: 'VETS_BRANCH', defaultValue: 'main', description: 'Branch for vets-service')
         string(name: 'GENAI_BRANCH', defaultValue: 'main', description: 'Branch for genai-service')
-        choice(name: 'TARGET_SERVICE', choices: ['customers', 'visits', 'vets', 'genai'], description: 'Service to deploy from feature branch')
+        string(name: 'ADMIN_BRANCH', defaultValue: 'main', description: 'Branch for admin-server')
+        string(name: 'CONFIG_BRANCH', defaultValue: 'main', description: 'Branch for config-server')
+        string(name: 'DISCOVERY_BRANCH', defaultValue: 'main', description: 'Branch for discovery-server')
+        string(name: 'GATEWAY_BRANCH', defaultValue: 'main', description: 'Branch for api-gateway')
+        
         choice(name: 'IMAGE_TAG_MODE', choices: ['latest', 'commit-hash'], description: 'Chọn image tag để deploy')
     }
 
@@ -39,75 +43,51 @@ pipeline {
         stage('Deploy to Kubernetes') {
             steps {
                 script {
-                    def branches = [
-                        'customers': params.CUSTOMERS_BRANCH,
-                        'visits'   : params.VISITS_BRANCH,
-                        'vets'     : params.VETS_BRANCH,
-                        'genai'    : params.GENAI_BRANCH
+                    def tags = [
+                        'customers-service'    : params.IMAGE_TAG_MODE == 'commit-hash' ? getCommitHash('customers', params.CUSTOMERS_BRANCH) : 'latest',
+                        'visits-service'       : params.IMAGE_TAG_MODE == 'commit-hash' ? getCommitHash('visits', params.VISITS_BRANCH) : 'latest',
+                        'vets-service'         : params.IMAGE_TAG_MODE == 'commit-hash' ? getCommitHash('vets', params.VETS_BRANCH) : 'latest',
+                        'genai-service'        : params.IMAGE_TAG_MODE == 'commit-hash' ? getCommitHash('genai', params.GENAI_BRANCH) : 'latest',
+                        'admin-server'         : params.IMAGE_TAG_MODE == 'commit-hash' ? getCommitHash('admin', params.ADMIN_BRANCH) : 'latest',
+                        'config-server'        : params.IMAGE_TAG_MODE == 'commit-hash' ? getCommitHash('config', params.CONFIG_BRANCH) : 'latest',
+                        'discovery-server'     : params.IMAGE_TAG_MODE == 'commit-hash' ? getCommitHash('discovery', params.DISCOVERY_BRANCH) : 'latest',
+                        'api-gateway'          : params.IMAGE_TAG_MODE == 'commit-hash' ? getCommitHash('gateway', params.GATEWAY_BRANCH) : 'latest'
                     ]
 
-                    def services = [
-                        'config-server',
-                        'discovery-server',
-                        'admin-server',
-                        'customers-service',
-                        'visits-service',
-                        'vets-service',
-                        'genai-service',
-                        'api-gateway'
-                    ]
 
-                    // Lấy commit hash nếu cần
-                    def commitHash = ""
-                    if (params.IMAGE_TAG_MODE == 'commit-hash') {
-                        commitHash = sh(script: "cd spring-petclinic-microservices && git rev-parse --short HEAD", returnStdout: true).trim()
-                    }
+                    // Ensure namespace exists
+                    sh "kubectl get namespace ${NAMESPACE} || kubectl create namespace ${NAMESPACE}"
 
-                    for (svc in services) {
-                        def branch = (branches.containsKey(params.TARGET_SERVICE) && svc.contains(params.TARGET_SERVICE)) ? branches[params.TARGET_SERVICE] : "main"
-                        def repoPath = "spring-petclinic-microservices/spring-petclinic-${svc}"
-
-                        sh "cd ${repoPath} && git fetch origin ${branch} && git checkout ${branch}"
-
-                        def tag = (params.IMAGE_TAG_MODE == 'commit-hash') ? commitHash : "latest"
-                        def imageTag = "22127063/spring-petclinic-${svc}:${tag}"
-                        def yamlPath = "spring-petclinic-microservices/${DEPLOY_PATH}/${svc}.yaml"
-
-                        echo "🚀 Deploying ${svc}-service with image: ${imageTag}"
-
-                        // Ensure namespace exists
-                        sh "kubectl get namespace ${NAMESPACE} || kubectl create namespace ${NAMESPACE}"
-
-                        // Apply Ingress if needed
-                        sh "kubectl apply -f spring-petclinic-microservices/k8s/ingress/ingress.yaml -n ${NAMESPACE}"
-
-                        // Apply ConfigMap and Secret
-                        sh "kubectl apply -f spring-petclinic-microservices/k8s/configmap.yaml -n ${NAMESPACE}"
-                        sh "kubectl apply -f spring-petclinic-microservices/k8s/secret.yaml -n ${NAMESPACE}"
-
-                        // Add and update Bitnami repo before installing MySQL
-                        sh '''
-                        helm repo add bitnami https://charts.bitnami.com/bitnami || true
-                        helm repo update
-                        helm upgrade pdb bitnami/mysql -n petclinic -f spring-petclinic-microservices/k8s/mysql/values.yml --version 12.3.4 --install
-                        '''
-
-                        // Only replace image line if not using 'latest'
-                        if (params.IMAGE_TAG_MODE == 'commit-hash') {
-                            sh "sed -i 's|image: .*|image: ${imageTag}|' ${yamlPath}"
-                        }
-
-                        // Apply deployment YAML
-                        sh "kubectl apply -f ${yamlPath}"
-                    }
+                    // Deploy all services using Helm chart
+                    sh """
+                    helm upgrade --install petclinic ./spring-petclinic-microservices/petclinic-chart -n ${NAMESPACE} \\
+                        --set namespace=${NAMESPACE} \\
+                        --set services.customers-service.tag=${tags['customers-service']} \\
+                        --set services.visits-service.tag=${tags['visits-service']} \\
+                        --set services.vets-service.tag=${tags['vets-service']} \\
+                        --set services.genai-service.tag=${tags['genai-service']} \\
+                        --set services.admin-server.tag=${tags['admin-server']} \\
+                        --set services.discovery-server.tag=${tags['discovery-server']} \\
+                        --set services.config-server.tag=${tags['config-server']} \\
+                        --set services.api-gateway.tag=${tags['api-gateway']}
+                    """
                 }
             }
         }
+
     }
 
     post {
         always {
             cleanWs()
         }
+    }
+}
+
+def getCommitHash(serviceName, branchName) {
+    dir("spring-petclinic-microservices") {
+        sh "git checkout ${branchName}"
+        def hash = sh(script: "git rev-parse --short HEAD", returnStdout: true).trim()
+        return hash
     }
 }

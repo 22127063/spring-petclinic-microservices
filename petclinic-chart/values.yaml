@@ -1,0 +1,73 @@
+namespace: petclinic
+
+services:
+  customers-service:
+    enabled: true
+    port: 8081
+    nodePort: 30081
+    tag: ""
+    image:
+      repository: 22127063/spring-petclinic-customers-service
+  visits-service:
+    enabled: true
+    port: 8082
+    nodePort: 30082
+    tag: ""
+    image:
+      repository: 22127063/spring-petclinic-visits-service
+  vets-service:
+    enabled: true
+    port: 8083
+    nodePort: 30083
+    tag: ""
+    image:
+      repository: 22127063/spring-petclinic-vets-service
+  genai-service:
+    enabled: true
+    port: 8084
+    nodePort: 30084
+    tag: ""
+    image:
+      repository: 22127063/spring-petclinic-genai-service
+  admin-server:
+    enabled: true
+    port: 9090
+    nodePort: 30090
+    tag: ""
+    image:
+      repository: 22127063/spring-petclinic-admin-server
+  config-server:
+    enabled: true
+    port: 8888
+    nodePort: 30088
+    tag: ""
+    image:
+      repository: 22127063/spring-petclinic-config-server
+  discovery-server:
+    enabled: true
+    port: 8761
+    nodePort: 30087
+    tag: ""
+    image:
+      repository: 22127063/spring-petclinic-discovery-server
+  api-gateway:
+    enabled: true
+    port: 8080
+    nodePort: 30080
+    tag: ""
+    image:
+      repository: 22127063/spring-petclinic-api-gateway
+replicaCount: 1
+
+configMap:
+  enabled: true
+  name: app-config
+  data:
+    SPRING_PROFILES_ACTIVE: "prod"
+    SERVER_PORT: "8080"
+
+secret:
+  enabled: true
+  name: app-secret
+  data:
+    MYSQL_PASSWORD: "admin123"
