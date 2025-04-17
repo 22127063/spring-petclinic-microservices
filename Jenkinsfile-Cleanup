@@ -33,6 +33,7 @@ pipeline {
                         sh """
                             kubectl delete deployment ${fullname} -n ${K8S_NAMESPACE} --ignore-not-found=true
                             kubectl delete svc --all -n ${K8S_NAMESPACE} --ignore-not-found=true
+                            kubectl delete pod --all -n ${K8S_NAMESPACE} --ignore-not-found=true
                             kubectl delete configmap ${svc}-config -n ${K8S_NAMESPACE} --ignore-not-found=true
                         """
                     }
@@ -42,7 +43,7 @@ pipeline {
 
         stage('Xóa Ingress') {
             steps {
-                sh "kubectl delete ingress petclinic-ingress -n ${K8S_NAMESPACE} --ignore-not-found=true"
+                sh "kubectl delete ingress ingress -n ${K8S_NAMESPACE} --ignore-not-found=true"
             }
         }
 
