@@ -58,7 +58,7 @@ pipeline {
 
                     // Deploy all services using Helm chart
                     sh """
-                    helm upgrade --install petclinic ./spring-petclinic-microservices/petclinic-chart -n ${NAMESPACE} \\
+                    helm upgrade --install petclinic ./spring-petclinic-microservices/petclinic-chart -n ${NAMESPACE} --create-namespace \\
                         --set namespace=${NAMESPACE} \\
                         --set services.customers-service.tag=${tags['customers-service']} \\
                         --set services.visits-service.tag=${tags['visits-service']} \\
