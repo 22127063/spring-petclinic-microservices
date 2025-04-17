@@ -144,7 +144,7 @@ pipeline {
                         dir("spring-petclinic-microservices/${service}") {
                             if (fileExists('pom.xml')) {
                                 echo "pom.xml found in ${service}, proceeding with build."
-                                sh 'mvn package -DskipTests -Dspring.cloud.config.enabled=false'
+                                sh 'mvn clean package -DskipTests -Dspring.cloud.config.enabled=false'
                                 archiveArtifacts artifacts: 'target/*.jar', fingerprint: true
 
                                 // 🧪 Kiểm tra xem data.sql có trong JAR không
