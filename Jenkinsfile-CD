@@ -36,25 +36,6 @@ pipeline {
             }
         }
 
-        stage('Deploy MySQL to Kubernetes') {
-            steps {
-                script {
-                    // Ensure MySQL deployment YAML exists
-                    def mysqlYamlPath = "spring-petclinic-microservices/k8s/deployment/mysql.yaml"
-                    
-                    if (fileExists(mysqlYamlPath)) {
-                        echo "🚀 Deploying MySQL to Kubernetes"
-                        // Ensure namespace exists
-                        sh "kubectl get namespace ${NAMESPACE} || kubectl create namespace ${NAMESPACE}"
-                        // Apply MySQL deployment YAML
-                        sh "kubectl apply -f ${mysqlYamlPath} -n ${NAMESPACE}"
-                    } else {
-                        echo "⚠️ MySQL deployment YAML not found!"
-                    }
-                }
-            }
-        }
-
         stage('Deploy to Kubernetes') {
             steps {
                 script {

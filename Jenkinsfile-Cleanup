@@ -24,8 +24,7 @@ pipeline {
                         "discovery-server",
                         "genai",
                         "vets",
-                        "visits",
-                        'mysql'
+                        "visits"
                     ]
 
                     for (svc in services) {
