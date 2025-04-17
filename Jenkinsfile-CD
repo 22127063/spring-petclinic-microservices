@@ -89,7 +89,7 @@ pipeline {
                         sh '''
                         helm repo add bitnami https://charts.bitnami.com/bitnami || true
                         helm repo update
-                        helm upgrade pdb bitnami/mysql -n spring-petclinic -f spring-petclinic-microservices/k8s/mysql/values.yml --version 6.14.4 --install
+                        helm upgrade pdb bitnami/mysql -n spring-petclinic -f spring-petclinic-microservices/k8s/mysql/values.yml --version 12.3.4 --install
                         '''
 
                         // Only replace image line if not using 'latest'
