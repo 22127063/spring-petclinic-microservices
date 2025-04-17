@@ -1,8 +1,0 @@
-apiVersion: v1
-kind: ConfigMap
-metadata:
-  name: {{ .Values.configMap.name }}
-  namespace: {{ .Values.namespace }}
-data:
-  SPRING_PROFILES_ACTIVE: {{ .Values.configMap.data.SPRING_PROFILES_ACTIVE }}
-  SERVER_PORT: {{ .Values.configMap.data.SERVER_PORT }}

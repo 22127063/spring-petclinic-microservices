@@ -6,8 +6,6 @@ pipeline {
     }
     environment {
         REPO_URL = 'https://github.com/22127063/spring-petclinic-microservices.git'
-        DEPLOY_PATH = 'k8s/deployment'
-        SERVICES_WITHOUT_TESTS = "spring-petclinic-admin-server spring-petclinic-genai-service"
         NAMESPACE = 'petclinic'
     }
 

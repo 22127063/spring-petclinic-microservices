@@ -58,16 +58,3 @@ services:
     image:
       repository: 22127063/spring-petclinic-api-gateway
 replicaCount: 1
-
-configMap:
-  enabled: true
-  name: app-config
-  data:
-    SPRING_PROFILES_ACTIVE: "prod"
-    SERVER_PORT: "8080"
-
-secret:
-  enabled: true
-  name: app-secret
-  data:
-    MYSQL_PASSWORD: "admin123"
