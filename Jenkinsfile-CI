@@ -146,6 +146,13 @@ pipeline {
                                 echo "pom.xml found in ${service}, proceeding with build."
                                 sh 'mvn package -DskipTests -Dspring.cloud.config.enabled=false'
                                 archiveArtifacts artifacts: 'target/*.jar', fingerprint: true
+
+                                // 🧪 Kiểm tra xem data.sql có trong JAR không
+                                echo "🧐 Checking if data.sql is packaged inside the JAR..."
+                                sh '''
+                                cd target
+                                jar tf *.jar | grep data.sql || echo "⚠️ data.sql not found in JAR"
+                                '''
                             } else {
                                 echo "pom.xml NOT FOUND in ${service}. Skipping build."
                             }
@@ -168,7 +175,7 @@ pipeline {
 
                     def servicePorts = [
                         "spring-petclinic-admin-server": 9090,
-                        "spring-petclinic-api-gateway": 8085,
+                        "spring-petclinic-api-gateway": 8080,
                         "spring-petclinic-config-server": 8888,
                         "spring-petclinic-customers-service": 8081,
                         "spring-petclinic-discovery-server": 8761,
