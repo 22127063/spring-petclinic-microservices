@@ -51,14 +51,6 @@ pipeline {
 
                     def commonFiles = ["pom.xml", ".github", "docker-compose.yml", "Dockerfile"]
 
-                    // Thêm tất cả các file bắt đầu bằng Jenkinsfile-
-                    def jenkinsfiles = sh(script: "ls Jenkinsfile-* 2>/dev/null || true", returnStdout: true)
-                                    .trim()
-                                    .split("\n")
-                                    .findAll { it } // loại bỏ chuỗi rỗng nếu không có file
-
-                    commonFiles += jenkinsfiles
-
                     if (changedFiles.any { file -> commonFiles.any { file.contains(it) } }) {
                         changedServiceList = services
                     }
