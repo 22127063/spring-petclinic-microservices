@@ -5,18 +5,9 @@ pipeline {
         KUBE_NAMESPACE = "dev"
     }
     stages {
-        stage('Checkout Code') {
+        stage('Checkout') {
             steps {
-                script {
-                    sh '''
-                    if [ ! -d spring-petclinic-microservices ]; then
-                        git clone https://github.com/22127063/spring-petclinic-microservices.git
-                    fi
-                    cd spring-petclinic-microservices
-                    git reset --hard HEAD
-                    git pull origin main
-                    '''
-                }
+                git branch: 'main', url: 'https://github.com/22127063/spring-petclinic-microservices.git'
             }
         }
 
@@ -68,6 +59,35 @@ pipeline {
                     }
 
                     echo "Services to build: ${env.CHANGED_SERVICES}"
+                }
+            }
+        }
+        stage('Build Services') {
+            when {
+                expression { return !env.CHANGED_SERVICES.trim().isEmpty() }
+            }
+            steps {
+                script {
+                    def serviceList = env.CHANGED_SERVICES.trim().split(" ")
+                    for (service in serviceList) {
+                        echo "Building service: ${service}"
+                        dir("spring-petclinic-microservices/${service}") {
+                            if (fileExists('pom.xml')) {
+                                echo "pom.xml found in ${service}, proceeding with build."
+                                sh 'mvn clean package -DskipTests -Dspring.cloud.config.enabled=false'
+                                archiveArtifacts artifacts: 'target/*.jar', fingerprint: true
+
+                                // 🧪 Kiểm tra xem data.sql có trong JAR không
+                                echo "🧐 Checking if data.sql is packaged inside the JAR..."
+                                sh '''
+                                cd target
+                                jar tf *.jar | grep data.sql || echo "⚠️ data.sql not found in JAR"
+                                '''
+                            } else {
+                                echo "pom.xml NOT FOUND in ${service}. Skipping build."
+                            }
+                        }
+                    }
                 }
             }
         }
@@ -152,7 +172,7 @@ pipeline {
                     }
 
                     // Commit và push
-                    withCredentials([usernamePassword(credentialsId: 'token-github', usernameVariable: 'GIT_USER', passwordVariable: 'GIT_PASS')]) {
+                    withCredentials([usernamePassword(credentialsId: 'github', usernameVariable: 'GIT_USER', passwordVariable: 'GIT_PASS')]) {
                         dir("spring-petclinic-microservices") {
                             sh """
                                 git config user.email "22127063@student.hcmus.edu.vn"
