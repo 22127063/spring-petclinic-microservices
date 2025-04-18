@@ -50,9 +50,6 @@ pipeline {
         }
 
         stage('🗑️ (Optional) Xóa cả namespace') {
-            when {
-                expression { return params.DELETE_NAMESPACE ?: false }
-            }
             steps {
                 sh """
                     echo "⚠️ Đang xóa toàn bộ namespace ${K8S_NAMESPACE}..."
