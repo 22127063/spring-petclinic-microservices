@@ -12,20 +12,9 @@ pipeline {
         stage('Xóa bằng Helm') {
             steps {
                 script {
-                    def helmReleases = [
-                        "admin-server",
-                        "api-gateway",
-                        "config-server",
-                        "customers",
-                        "discovery-server",
-                        "genai",
-                        "vets",
-                        "visits"
-                    ]
-
                     for (release in helmReleases) {
                         sh """
-                            helm uninstall ${release} -n ${K8S_NAMESPACE} || echo "⚠️ Release '${release}' không tồn tại."
+                            helm uninstall ${K8S_NAMESPACE} || echo "⚠️ Namespace ${K8S_NAMESPACE} không tồn tại."
                         """
                     }
                 }
