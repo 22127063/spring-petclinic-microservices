@@ -4,25 +4,67 @@ pipeline {
     options {
         buildDiscarder(logRotator(numToKeepStr: '5'))
     }
+
     environment {
         K8S_NAMESPACE = "petclinic"
     }
 
     stages {
-        stage('Xóa bằng Helm') {
+        stage('🧹 Xóa Helm Release') {
             steps {
                 script {
-                    sh """
-                        helm uninstall ${K8S_NAMESPACE} || echo "⚠️ Namespace ${K8S_NAMESPACE} không tồn tại."
-                    """
+                    def helmReleases = [
+                        "admin-server",
+                        "api-gateway",
+                        "config-server",
+                        "customers",
+                        "discovery-server",
+                        "genai",
+                        "vets",
+                        "visits"
+                    ]
+
+                    for (release in helmReleases) {
+                        sh """
+                            echo "🗑️ Đang gỡ Helm release: ${release}"
+                            helm uninstall ${release} -n ${K8S_NAMESPACE} || echo "⚠️ Helm release '${release}' không tồn tại."
+                        """
+                    }
                 }
+            }
+        }
+
+        stage('🧨 Xóa tài nguyên K8s còn sót') {
+            steps {
+                script {
+                    def resources = ["pod", "service", "ingress", "deployment", "statefulset", "replicaset", "configmap", "secret"]
+
+                    for (res in resources) {
+                        sh """
+                            echo "🧼 Đang xóa tài nguyên ${res} trong namespace ${K8S_NAMESPACE}..."
+                            kubectl delete ${res} --all -n ${K8S_NAMESPACE} || echo "⚠️ Không còn ${res} nào để xóa."
+                        """
+                    }
+                }
+            }
+        }
+
+        stage('🗑️ (Optional) Xóa cả namespace') {
+            when {
+                expression { return params.DELETE_NAMESPACE ?: false }
+            }
+            steps {
+                sh """
+                    echo "⚠️ Đang xóa toàn bộ namespace ${K8S_NAMESPACE}..."
+                    kubectl delete namespace ${K8S_NAMESPACE} || echo "⚠️ Namespace '${K8S_NAMESPACE}' không tồn tại."
+                """
             }
         }
     }
 
     post {
         always {
-            echo "✅ Cleanup hoàn tất!"
+            echo "✅ Toàn bộ quá trình cleanup đã hoàn tất!"
         }
     }
 }
