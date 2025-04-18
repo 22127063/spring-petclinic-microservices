@@ -38,8 +38,10 @@ pipeline {
                 script {
                     echo "🛠 Force xoá finalizers (nếu namespace bị treo)..."
                     sh """
-                    kubectl get namespace ${params.NAMESPACE} -o json | jq '.spec.finalizers = []' | \
-                    kubectl replace --raw "/api/v1/namespaces/${params.NAMESPACE}/finalize" -f - || true
+                    kubectl get namespace ${params.NAMESPACE} -o json > ns.json || true
+                    sed -i 's/"finalizers": \\[.*\\]/"finalizers": []/' ns.json
+                    kubectl replace --raw "/api/v1/namespaces/${params.NAMESPACE}/finalize" -f ns.json || true
+                    rm -f ns.json
                     """
                 }
             }
