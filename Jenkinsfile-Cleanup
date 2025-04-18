@@ -1,67 +1,73 @@
 pipeline {
     agent { label 'agent-main' }
 
-    options {
-        buildDiscarder(logRotator(numToKeepStr: '5'))
+    parameters {
+        string(name: 'NAMESPACE', defaultValue: 'petclinic', description: 'Namespace cần xóa')
+        booleanParam(name: 'DELETE_INGRESS', defaultValue: false, description: 'Xóa luôn ingress-nginx namespace?')
     }
 
     environment {
-        K8S_NAMESPACE = "petclinic"
+        HELM_RELEASE = 'petclinic'
     }
 
     stages {
-        stage('🧹 Xóa Helm Release') {
+        stage('Delete Helm Release') {
             steps {
                 script {
-                    def helmReleases = [
-                        "admin-server",
-                        "api-gateway",
-                        "config-server",
-                        "customers",
-                        "discovery-server",
-                        "genai",
-                        "vets",
-                        "visits"
-                    ]
-
-                    for (release in helmReleases) {
-                        sh """
-                            echo "🗑️ Đang gỡ Helm release: ${release}"
-                            helm uninstall ${release} -n ${K8S_NAMESPACE} || echo "⚠️ Helm release '${release}' không tồn tại."
-                        """
-                    }
+                    echo "🧹 Xóa Helm release '${HELM_RELEASE}' trong namespace ${params.NAMESPACE}..."
+                    sh """
+                    helm uninstall ${HELM_RELEASE} -n ${params.NAMESPACE} || echo '⚠️ Release không tồn tại hoặc đã xoá'
+                    """
                 }
             }
         }
 
-        stage('🧨 Xóa tài nguyên K8s còn sót') {
+        stage('Delete Namespace') {
             steps {
                 script {
-                    def resources = ["pod", "service", "ingress", "deployment", "statefulset", "replicaset", "configmap", "secret"]
-
-                    for (res in resources) {
-                        sh """
-                            echo "🧼 Đang xóa tài nguyên ${res} trong namespace ${K8S_NAMESPACE}..."
-                            kubectl delete ${res} --all -n ${K8S_NAMESPACE} || echo "⚠️ Không còn ${res} nào để xóa."
-                        """
-                    }
+                    echo "🧼 Xóa namespace ${params.NAMESPACE}..."
+                    sh """
+                    kubectl delete namespace ${params.NAMESPACE} || echo '⚠️ Namespace không tồn tại'
+                    """
                 }
             }
         }
 
-        stage('🗑️ (Optional) Xóa cả namespace') {
+        stage('Force Finalizer Cleanup (nếu cần)') {
             steps {
-                sh """
-                    echo "⚠️ Đang xóa toàn bộ namespace ${K8S_NAMESPACE}..."
-                    kubectl delete namespace ${K8S_NAMESPACE} || echo "⚠️ Namespace '${K8S_NAMESPACE}' không tồn tại."
-                """
+                script {
+                    echo "🛠 Force xoá finalizers (nếu namespace bị treo)..."
+                    sh """
+                    kubectl get namespace ${params.NAMESPACE} -o json | jq '.spec.finalizers = []' | \
+                    kubectl replace --raw "/api/v1/namespaces/${params.NAMESPACE}/finalize" -f - || true
+                    """
+                }
+            }
+        }
+
+        stage('Delete Ingress NGINX (tuỳ chọn)') {
+            when {
+                expression { return params.DELETE_INGRESS }
+            }
+            steps {
+                script {
+                    echo "🧨 Xoá ingress-nginx..."
+                    sh """
+                    helm uninstall ingress-nginx -n ingress-nginx || echo '⚠️ Helm release không tồn tại'
+                    kubectl delete namespace ingress-nginx || echo '⚠️ Namespace không tồn tại'
+
+                    # Finalizer cleanup nếu namespace treo
+                    kubectl get namespace ingress-nginx -o json | jq '.spec.finalizers = []' | \
+                    kubectl replace --raw "/api/v1/namespaces/ingress-nginx/finalize" -f - || true
+                    """
+                }
             }
         }
     }
 
     post {
         always {
-            echo "✅ Toàn bộ quá trình cleanup đã hoàn tất!"
+            cleanWs()
         }
     }
 }
