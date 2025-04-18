@@ -1,0 +1,185 @@
+pipeline {
+    agent any
+    environment {
+        DOCKER_IMAGE = "22127063/spring-petclinic:${IMAGE_TAG}"
+        KUBE_NAMESPACE = "staging"
+    }
+    stages {
+        stage('Checkout Code') {
+            steps {
+                script {
+                    sh '''
+                    if [ ! -d spring-petclinic-microservices ]; then
+                        git clone https://github.com/22127063/spring-petclinic-microservices.git
+                    fi
+                    cd spring-petclinic-microservices
+                    git reset --hard HEAD
+                    git pull origin main
+                    '''
+                }
+            }
+        }
+
+        stage('Detect Changes') {
+            steps {
+                script {
+                    echo "Running pipeline for Branch: ${env.BRANCH_NAME}"
+
+                    def prevCommitExists = sh(script: "cd spring-petclinic-microservices && git rev-parse HEAD~1", returnStatus: true) == 0
+                    def changedFiles = prevCommitExists 
+                        ? sh(script: "cd spring-petclinic-microservices && git diff --name-only HEAD~1 HEAD", returnStdout: true).trim().split("\n")
+                        : []
+
+                    def services = [
+                        'spring-petclinic-admin-server',
+                        'spring-petclinic-api-gateway',
+                        'spring-petclinic-config-server',
+                        'spring-petclinic-customers-service',
+                        'spring-petclinic-discovery-server',
+                        'spring-petclinic-genai-service',
+                        'spring-petclinic-vets-service',
+                        'spring-petclinic-visits-service'
+                    ]
+
+                    def changedServiceList = services.findAll { service ->
+                        changedFiles.any { it.contains(service) }
+                    }
+
+                    def commonFiles = ["pom.xml", ".github", "docker-compose.yml", "Dockerfile"]
+
+                    // Thêm tất cả các file bắt đầu bằng Jenkinsfile-
+                    def jenkinsfiles = sh(script: "ls Jenkinsfile-* 2>/dev/null || true", returnStdout: true)
+                                    .trim()
+                                    .split("\n")
+                                    .findAll { it } // loại bỏ chuỗi rỗng nếu không có file
+
+                    commonFiles += jenkinsfiles
+
+                    if (changedFiles.any { file -> commonFiles.any { file.contains(it) } }) {
+                        changedServiceList = services
+                    }
+
+                    env.CHANGED_SERVICES = changedServiceList.join(" ")
+
+                    if (env.CHANGED_SERVICES.trim().isEmpty()) {
+                        echo "No relevant changes detected. Skipping pipeline."
+                        currentBuild.result = 'SUCCESS'
+                        return
+                    }
+
+                    echo "Services to build: ${env.CHANGED_SERVICES}"
+                }
+            }
+        }
+        stage('Docker Build & Push') {
+            when {
+                expression { return !env.CHANGED_SERVICES?.trim().isEmpty() }
+            }
+            steps {
+                script {
+                    def servicesList = env.CHANGED_SERVICES.tokenize(' ')
+                    if (servicesList.isEmpty()) {
+                        error("❌ No changed services found. Check Detect Changes stage.")
+                    }
+
+                    def servicePorts = [
+                        "spring-petclinic-admin-server": 9090,
+                        "spring-petclinic-api-gateway": 8080,
+                        "spring-petclinic-config-server": 8888,
+                        "spring-petclinic-customers-service": 8081,
+                        "spring-petclinic-discovery-server": 8761,
+                        "spring-petclinic-genai-service": 8084,
+                        "spring-petclinic-vets-service": 8083,
+                        "spring-petclinic-visits-service": 8082
+                    ]
+
+                    def commitHash = sh(script: "cd spring-petclinic-microservices && git rev-parse --short HEAD", returnStdout: true).trim()
+
+                    withCredentials([usernamePassword(
+                        credentialsId: 'docker',
+                        usernameVariable: 'DOCKERHUB_USER',
+                        passwordVariable: 'DOCKERHUB_PASSWORD'
+                    )]) {
+                        sh """
+                            echo "${DOCKERHUB_PASSWORD}" | docker login -u "${DOCKERHUB_USER}" --password-stdin
+                        """
+                    }
+
+                    for (service in servicesList) {
+                        echo "🐳 Building & pushing Docker image for ${service}..."
+                        def shortServiceName = service.replaceFirst("spring-petclinic-", "")
+                        def servicePort = servicePorts.get(service, 8080)
+
+                        dir("spring-petclinic-microservices") {
+                            if (fileExists("Dockerfile")) {
+                                def imageTag = "22127063/${service}:${commitHash}-staging"
+                                sh """
+                                docker build \\
+                                    --build-arg SERVICE_NAME=${shortServiceName} \\
+                                    --build-arg EXPOSED_PORT=${servicePort} \\
+                                    -f Dockerfile \\
+                                    -t ${imageTag} \\
+                                    -t 22127063/${service}:latest \\
+                                    .
+                                docker push ${imageTag}
+                                docker push 22127063/${service}:latest
+                                docker rmi ${imageTag} || true
+                                docker rmi 22127063/${service}:latest || true
+                                docker image prune -f
+                                """
+                            } else {
+                                echo "❌ Dockerfile not found for ${service}, skipping build."
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        stage('Update Helm values.yaml') {
+            steps {
+                script {
+                    def commitHash = sh(script: "cd spring-petclinic-microservices && git rev-parse --short HEAD", returnStdout: true).trim()
+                    def valuesFile = "spring-petclinic-microservices/petclinic-chart/values-${KUBE_NAMESPACE}.yaml"
+
+                    // Cập nhật commit hash vào values.yaml
+                    def services = env.CHANGED_SERVICES.tokenize(' ')
+                    for (svc in services) {
+                        echo "🔧 Updating image tag for ${svc} in ${valuesFile}..."
+
+                        sh """
+                            sed -i "/^  ${svc}:/,/^[^[:space:]]/s/^[[:space:]]*commit: .*/    commit: \\"${commitHash}\\"/" ${valuesFile}
+                        """
+                    }
+
+                    // Commit và push
+                    withCredentials([usernamePassword(credentialsId: 'github', usernameVariable: 'GIT_USER', passwordVariable: 'GIT_PASS')]) {
+                        dir("spring-petclinic-microservices") {
+                            sh """
+                                git config user.email "22127063@student.hcmus.edu.vn"
+                                git config user.name "22127063"
+
+                                git add ${valuesFile}
+                                git commit -m "chore: update ${KUBE_NAMESPACE} values.yaml with ${commitHash} [skip ci]" || echo "No changes to commit"
+                                git remote set-url origin https://${GIT_USER}:${GIT_PASS}@github.com/22127063/spring-petclinic-microservices.git
+                                git push origin ${KUBE_NAMESPACE}
+                            """
+                        }
+                    }
+                }
+            }
+        }
+        stage('Trigger ArgoCD Sync') {
+            steps {
+                sh 'argocd app sync spring-petclinic-dev'
+            }
+        }
+    }
+}
+
+def getCommitHash(serviceName, branchName) {
+    dir("spring-petclinic-microservices") {
+        sh "git checkout ${branchName}"
+        def hash = sh(script: "git rev-parse --short HEAD", returnStdout: true).trim()
+        return hash
+    }
+}

@@ -1,0 +1,66 @@
+replicaCount: 1
+
+services:
+  customers-service:
+    enabled: true
+    port: 8081
+    nodePort: 30081
+    tag: "dev-{{ .Values.gitCommit | default \"latest\" }}"
+    image:
+      repository: 22127063/spring-petclinic-customers-service
+
+  visits-service:
+    enabled: true
+    port: 8082
+    nodePort: 30082
+    tag: "dev-{{ .Values.gitCommit | default \"latest\" }}"
+    image:
+      repository: 22127063/spring-petclinic-visits-service
+
+  vets-service:
+    enabled: true
+    port: 8083
+    nodePort: 30083
+    tag: "dev-{{ .Values.gitCommit | default \"latest\" }}"
+    image:
+      repository: 22127063/spring-petclinic-vets-service
+
+  genai-service:
+    enabled: true
+    port: 8084
+    nodePort: 30084
+    tag: "dev-{{ .Values.gitCommit | default \"latest\" }}"
+    image:
+      repository: 22127063/spring-petclinic-genai-service
+
+  admin-server:
+    enabled: true
+    port: 9090
+    nodePort: 30090
+    tag: "dev-{{ .Values.gitCommit | default \"latest\" }}"
+    image:
+      repository: 22127063/spring-petclinic-admin-server
+
+  config-server:
+    enabled: true
+    port: 8888
+    nodePort: 30088
+    tag: "dev-{{ .Values.gitCommit | default \"latest\" }}"
+    image:
+      repository: 22127063/spring-petclinic-config-server
+
+  discovery-server:
+    enabled: true
+    port: 8761
+    nodePort: 30087
+    tag: "dev-{{ .Values.gitCommit | default \"latest\" }}"
+    image:
+      repository: 22127063/spring-petclinic-discovery-server
+
+  api-gateway:
+    enabled: true
+    port: 8080
+    nodePort: 30080
+    tag: "dev-{{ .Values.gitCommit | default \"latest\" }}"
+    image:
+      repository: 22127063/spring-petclinic-api-gateway
