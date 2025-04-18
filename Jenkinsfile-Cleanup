@@ -8,15 +8,11 @@ pipeline {
         K8S_NAMESPACE = "petclinic"
     }
 
-    parameters {
-        booleanParam(name: 'DELETE_NAMESPACE', defaultValue: false, description: 'Xóa luôn namespace?')
-    }
-
     stages {
-        stage('Xóa Deployment, Service, ConfigMap') {
+        stage('Xóa bằng Helm') {
             steps {
                 script {
-                    def services = [
+                    def helmReleases = [
                         "admin-server",
                         "api-gateway",
                         "config-server",
@@ -27,36 +23,10 @@ pipeline {
                         "visits"
                     ]
 
-                    for (svc in services) {
-                        def fullname = "${svc}"
+                    for (release in helmReleases) {
                         sh """
-                            kubectl delete deployment ${fullname} -n ${K8S_NAMESPACE} --ignore-not-found=true
-                            kubectl delete svc --all -n ${K8S_NAMESPACE} --ignore-not-found=true
-                            kubectl delete pod --all -n ${K8S_NAMESPACE} --ignore-not-found=true
-                            kubectl delete configmap ${svc}-config -n ${K8S_NAMESPACE} --ignore-not-found=true
+                            helm uninstall ${release} -n ${K8S_NAMESPACE} || echo "⚠️ Release '${release}' không tồn tại."
                         """
-                    }
-                }
-            }
-        }
-
-        stage('Xóa Ingress') {
-            steps {
-                sh "kubectl delete ingress ingress -n ${K8S_NAMESPACE} --ignore-not-found=true"
-            }
-        }
-
-        stage('Xóa Namespace (nếu chọn)') {
-            when {
-                expression { return params.DELETE_NAMESPACE }
-            }
-            steps {
-                script {
-                    def nsExists = sh(script: "kubectl get ns ${K8S_NAMESPACE}", returnStatus: true) == 0
-                    if (nsExists) {
-                        sh "kubectl delete namespace ${K8S_NAMESPACE} --ignore-not-found=true"
-                    } else {
-                        echo "⚠️ Namespace '${K8S_NAMESPACE}' không tồn tại."
                     }
                 }
             }
