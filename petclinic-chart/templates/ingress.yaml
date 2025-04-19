@@ -7,6 +7,7 @@ metadata:
   name: {{ $name }}-ingress
   annotations:
     nginx.ingress.kubernetes.io/rewrite-target: /
+    kubernetes.io/ingress.class: "nginx"
 spec:
   rules:
     - host: {{ $name }}.petclinic.local
