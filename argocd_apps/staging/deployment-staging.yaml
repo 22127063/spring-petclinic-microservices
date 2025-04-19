@@ -8,7 +8,7 @@ spec:
   source:
     repoURL: https://github.com/22127063/spring-petclinic-microservices.git
     path: petclinic-chart/
-    targetRevision: main
+    targetRevision: staging
     helm:
       valueFiles:
         - values-staging.yaml
