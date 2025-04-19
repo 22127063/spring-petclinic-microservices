@@ -92,7 +92,7 @@ pipeline {
                     // Trigger ArgoCD for staging deployment
                     if (isStaging) {
                         sh """
-                        argocd app sync petclinic --namespace ${namespace} --revision ${params.GIT_TAG}
+                        argocd app sync petclinic --namespace ${namespace} --revision ${params.GIT_TAG} --sync-option Prune=true
                         """
                     }
                 }
