@@ -19,7 +19,7 @@ spec:
     spec:
       containers:
         - name: {{ $name }}
-          image: "{{ $svc.image.repository }}:{{ $svc.tag | default "latest" }}"
+          image: image: "{{ $svc.image.repository }}:{{ $svc.tag | default ($.Values.gitCommit | default \"latest\") }}"
           imagePullPolicy: IfNotPresent
           ports:
             - name: http

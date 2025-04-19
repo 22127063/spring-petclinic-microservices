@@ -5,7 +5,7 @@ services:
     enabled: true
     port: 8081
     nodePort: 30081
-    tag: "dev-{{ .Values.gitCommit | default \"latest\" }}"
+    tag: ""
     image:
       repository: 22127063/spring-petclinic-customers-service
 
@@ -13,7 +13,7 @@ services:
     enabled: true
     port: 8082
     nodePort: 30082
-    tag: "dev-{{ .Values.gitCommit | default \"latest\" }}"
+    tag: ""
     image:
       repository: 22127063/spring-petclinic-visits-service
 
@@ -21,7 +21,7 @@ services:
     enabled: true
     port: 8083
     nodePort: 30083
-    tag: "dev-{{ .Values.gitCommit | default \"latest\" }}"
+    tag: ""
     image:
       repository: 22127063/spring-petclinic-vets-service
 
@@ -29,7 +29,7 @@ services:
     enabled: true
     port: 8084
     nodePort: 30084
-    tag: "dev-{{ .Values.gitCommit | default \"latest\" }}"
+    tag: ""
     image:
       repository: 22127063/spring-petclinic-genai-service
 
@@ -37,7 +37,7 @@ services:
     enabled: true
     port: 9090
     nodePort: 30090
-    tag: "dev-{{ .Values.gitCommit | default \"latest\" }}"
+    tag: ""
     image:
       repository: 22127063/spring-petclinic-admin-server
 
@@ -45,7 +45,7 @@ services:
     enabled: true
     port: 8888
     nodePort: 30088
-    tag: "dev-{{ .Values.gitCommit | default \"latest\" }}"
+    tag: ""
     image:
       repository: 22127063/spring-petclinic-config-server
 
@@ -53,7 +53,7 @@ services:
     enabled: true
     port: 8761
     nodePort: 30087
-    tag: "dev-{{ .Values.gitCommit | default \"latest\" }}"
+    tag: ""
     image:
       repository: 22127063/spring-petclinic-discovery-server
 
@@ -61,6 +61,6 @@ services:
     enabled: true
     port: 8080
     nodePort: 30080
-    tag: "dev-{{ .Values.gitCommit | default \"latest\" }}"
+    tag: ""
     image:
       repository: 22127063/spring-petclinic-api-gateway

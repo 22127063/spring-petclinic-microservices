@@ -4,9 +4,12 @@ pipeline {
     options {
         buildDiscarder(logRotator(numToKeepStr: '5'))
     }
+
     environment {
         REPO_URL = 'https://github.com/22127063/spring-petclinic-microservices.git'
-        NAMESPACE = 'petclinic'
+        NAMESPACE_DEV = 'dev'
+        NAMESPACE_STAGING = 'staging'
+        DOCKER_REGISTRY = 'docker.io/yourusername'
     }
 
     parameters {
@@ -18,8 +21,9 @@ pipeline {
         string(name: 'CONFIG_BRANCH', defaultValue: 'main', description: 'Branch for config-server')
         string(name: 'DISCOVERY_BRANCH', defaultValue: 'main', description: 'Branch for discovery-server')
         string(name: 'GATEWAY_BRANCH', defaultValue: 'main', description: 'Branch for api-gateway')
-        
-        choice(name: 'IMAGE_TAG_MODE', choices: ['latest', 'commit-hash'], description: 'Chọn image tag để deploy')
+
+        choice(name: 'IMAGE_TAG_MODE', choices: ['latest', 'commit-hash'], description: 'Choose image tag for deployment')
+        string(name: 'GIT_TAG', defaultValue: '', description: 'Git tag to trigger staging deployment')
     }
 
     stages {
@@ -41,6 +45,10 @@ pipeline {
         stage('Deploy to Kubernetes') {
             steps {
                 script {
+                    // Check if we are deploying to staging based on a tag
+                    def isStaging = params.GIT_TAG != ''
+
+                    // Build the tags for the services
                     def tags = [
                         'customers-service'    : params.IMAGE_TAG_MODE == 'commit-hash' ? getCommitHash('customers', params.CUSTOMERS_BRANCH) : 'latest',
                         'visits-service'       : params.IMAGE_TAG_MODE == 'commit-hash' ? getCommitHash('visits', params.VISITS_BRANCH) : 'latest',
@@ -52,14 +60,17 @@ pipeline {
                         'api-gateway'          : params.IMAGE_TAG_MODE == 'commit-hash' ? getCommitHash('gateway', params.GATEWAY_BRANCH) : 'latest'
                     ]
 
+                    // Deploy to dev if no tag is provided, or deploy to staging if tag is provided
+                    def namespace = isStaging ? NAMESPACE_STAGING : NAMESPACE_DEV
+                    def imageTag = isStaging ? params.GIT_TAG : 'latest'
 
-                    // Ensure namespace exists
-                    sh "kubectl get namespace ${NAMESPACE} || kubectl create namespace ${NAMESPACE}"
+                    // Ensure the namespace exists
+                    sh "kubectl get namespace ${namespace} || kubectl create namespace ${namespace}"
 
                     // Deploy all services using Helm chart
                     sh """
-                    helm upgrade --install petclinic ./spring-petclinic-microservices/petclinic-chart -n ${NAMESPACE} --create-namespace \\
-                        --set namespace=${NAMESPACE} \\
+                    helm upgrade --install petclinic ./spring-petclinic-microservices/petclinic-chart -n ${namespace} --create-namespace \\
+                        --set namespace=${namespace} \\
                         --set services.customers-service.tag=${tags['customers-service']} \\
                         --set services.visits-service.tag=${tags['visits-service']} \\
                         --set services.vets-service.tag=${tags['vets-service']} \\
@@ -69,10 +80,24 @@ pipeline {
                         --set services.config-server.tag=${tags['config-server']} \\
                         --set services.api-gateway.tag=${tags['api-gateway']}
                     """
+
+                    // If deploying to staging, push the Docker images to Docker Hub
+                    if (isStaging) {
+                        sh "docker build -t ${DOCKER_REGISTRY}/petclinic/customers-service:${params.GIT_TAG} ./spring-petclinic-microservices/customers-service"
+                        sh "docker push ${DOCKER_REGISTRY}/petclinic/customers-service:${params.GIT_TAG}"
+
+                        // Repeat for other services...
+                    }
+
+                    // Trigger ArgoCD for staging deployment
+                    if (isStaging) {
+                        sh """
+                        argocd app sync petclinic --namespace ${namespace} --revision ${params.GIT_TAG}
+                        """
+                    }
                 }
             }
         }
-
     }
 
     post {
