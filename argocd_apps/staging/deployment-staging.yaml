@@ -4,7 +4,7 @@ metadata:
   name: spring-petclinic-staging
   namespace: argocd
 spec:
-  project: default
+  project: spring-petclinic-project
   source:
     repoURL: https://github.com/22127063/spring-petclinic-microservices.git
     path: petclinic-chart/
