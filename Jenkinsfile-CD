@@ -45,6 +45,11 @@ pipeline {
         stage('Deploy to Kubernetes') {
             steps {
                 script {
+                    // Apply ArgoCD Project & App YAMLs (project, dev, staging)
+                    sh """
+                    kubectl apply -f ./spring-petclinic-microservices/argocd_apps/project.yaml
+                    """
+
                     // Kiểm tra xem có phải môi trường staging không
                     def isStaging = params.GIT_TAG != ''
 
