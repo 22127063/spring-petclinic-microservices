@@ -45,10 +45,16 @@ pipeline {
         stage('Deploy to Kubernetes') {
             steps {
                 script {
-                    // Check if we are deploying to staging based on a tag
+                    // 🧱 1. Apply ArgoCD Project & App YAMLs (project, dev, staging)
+                    sh """
+                    kubectl apply -f ./spring-petclinic-microservices/argocd/project.yaml
+                    kubectl apply -f ./spring-petclinic-microservices/argocd/deployment-dev.yaml
+                    kubectl apply -f ./spring-petclinic-microservices/argocd/deployment-staging.yaml
+                    """
+
+                    // 🚀 2. Staging or Dev?
                     def isStaging = params.GIT_TAG != ''
 
-                    // Build the tags for the services
                     def tags = [
                         'customers-service'    : params.IMAGE_TAG_MODE == 'commit-hash' ? getCommitHash('customers', params.CUSTOMERS_BRANCH) : 'latest',
                         'visits-service'       : params.IMAGE_TAG_MODE == 'commit-hash' ? getCommitHash('visits', params.VISITS_BRANCH) : 'latest',
@@ -60,14 +66,13 @@ pipeline {
                         'api-gateway'          : params.IMAGE_TAG_MODE == 'commit-hash' ? getCommitHash('gateway', params.GATEWAY_BRANCH) : 'latest'
                     ]
 
-                    // Deploy to dev if no tag is provided, or deploy to staging if tag is provided
                     def namespace = isStaging ? NAMESPACE_STAGING : NAMESPACE_DEV
                     def imageTag = isStaging ? params.GIT_TAG : 'latest'
 
-                    // Ensure the namespace exists
+                    // 🧪 Make sure namespace exists
                     sh "kubectl get namespace ${namespace} || kubectl create namespace ${namespace}"
 
-                    // Deploy all services using Helm chart
+                    // 🛠️ Deploy via Helm
                     sh """
                     helm upgrade --install petclinic ./spring-petclinic-microservices/petclinic-chart -n ${namespace} --create-namespace \\
                         --set namespace=${namespace} \\
@@ -81,7 +86,7 @@ pipeline {
                         --set services.api-gateway.tag=${tags['api-gateway']}
                     """
 
-                    // If deploying to staging, push the Docker images to Docker Hub
+                    // 🐳 Push images if deploying to staging
                     if (isStaging) {
                         def services = [
                             'customers-service',
@@ -100,10 +105,14 @@ pipeline {
                         }
                     }
 
-                    // Trigger ArgoCD for staging deployment
+                    // 🔁 Trigger ArgoCD sync if staging
                     if (isStaging) {
                         sh """
-                        argocd app sync petclinic --namespace ${namespace} --revision ${params.GIT_TAG} --sync-option Prune=true
+                        argocd app sync petclinic-staging --revision ${params.GIT_TAG} --sync-option Prune=true
+                        """
+                    } else {
+                        sh """
+                        argocd app sync petclinic-dev --sync-option Prune=true
                         """
                     }
                 }
