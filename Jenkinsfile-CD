@@ -45,16 +45,34 @@ pipeline {
         stage('Deploy to Kubernetes') {
             steps {
                 script {
-                    // 🧱 1. Apply ArgoCD Project & App YAMLs (project, dev, staging)
-                    sh """
-                    kubectl apply -f ./spring-petclinic-microservices/argocd_apps/project.yaml
-                    kubectl apply -f ./spring-petclinic-microservices/argocd_apps/dev/deployment-dev.yaml
-                    kubectl apply -f ./spring-petclinic-microservices/argocd_apps/staging/deployment-staging.yaml
-                    """
-
-                    // 🚀 2. Staging or Dev?
+                    // Kiểm tra xem có phải môi trường staging không
                     def isStaging = params.GIT_TAG != ''
 
+                    if (isStaging) {
+                        // Nếu staging, deploy staging
+                        echo "Deploying to Staging"
+                        sh """
+                            kubectl apply -f ./spring-petclinic-microservices/argocd_apps/staging/deployment-staging.yaml
+                        """
+
+                        // Chắc chắn rằng không deploy dev khi đang deploy staging
+                        sh """
+                            kubectl delete -f ./spring-petclinic-microservices/argocd_apps/dev/deployment-dev.yaml || true
+                        """
+                    } else {
+                        // Nếu dev, deploy dev
+                        echo "Deploying to Dev"
+                        sh """
+                            kubectl apply -f ./spring-petclinic-microservices/argocd_apps/dev/deployment-dev.yaml
+                        """
+
+                        // Chắc chắn rằng không deploy staging khi đang deploy dev
+                        sh """
+                            kubectl delete -f ./spring-petclinic-microservices/argocd_apps/staging/deployment-staging.yaml || true
+                        """
+                    }
+
+                    // Cấu hình và deploy qua Helm
                     def tags = [
                         'customers-service'    : params.IMAGE_TAG_MODE == 'commit-hash' ? getCommitHash('customers', params.CUSTOMERS_BRANCH) : 'latest',
                         'visits-service'       : params.IMAGE_TAG_MODE == 'commit-hash' ? getCommitHash('visits', params.VISITS_BRANCH) : 'latest',
@@ -69,55 +87,26 @@ pipeline {
                     def namespace = isStaging ? NAMESPACE_STAGING : NAMESPACE_DEV
                     def imageTag = isStaging ? params.GIT_TAG : 'latest'
 
-                    // 🧪 Make sure namespace exists
+                    // 🧪 Ensure namespace exists
                     sh "kubectl get namespace ${namespace} || kubectl create namespace ${namespace}"
 
                     // 🛠️ Deploy via Helm
                     sh """
-                    helm upgrade --install petclinic ./spring-petclinic-microservices/petclinic-chart -n ${namespace} --create-namespace \\
-                        --set namespace=${namespace} \\
-                        --set services.customers-service.tag=${tags['customers-service']} \\
-                        --set services.visits-service.tag=${tags['visits-service']} \\
-                        --set services.vets-service.tag=${tags['vets-service']} \\
-                        --set services.genai-service.tag=${tags['genai-service']} \\
-                        --set services.admin-server.tag=${tags['admin-server']} \\
-                        --set services.discovery-server.tag=${tags['discovery-server']} \\
-                        --set services.config-server.tag=${tags['config-server']} \\
-                        --set services.api-gateway.tag=${tags['api-gateway']}
+                        helm upgrade --install petclinic ./spring-petclinic-microservices/petclinic-chart -n ${namespace} --create-namespace \\
+                            --set namespace=${namespace} \\
+                            --set services.customers-service.tag=${tags['customers-service']} \\
+                            --set services.visits-service.tag=${tags['visits-service']} \\
+                            --set services.vets-service.tag=${tags['vets-service']} \\
+                            --set services.genai-service.tag=${tags['genai-service']} \\
+                            --set services.admin-server.tag=${tags['admin-server']} \\
+                            --set services.discovery-server.tag=${tags['discovery-server']} \\
+                            --set services.config-server.tag=${tags['config-server']} \\
+                            --set services.api-gateway.tag=${tags['api-gateway']}
                     """
-
-                    // 🐳 Push images if deploying to staging
-                    if (isStaging) {
-                        def services = [
-                            'customers-service',
-                            'visits-service',
-                            'vets-service',
-                            'genai-service',
-                            'admin-server',
-                            'config-server',
-                            'discovery-server',
-                            'api-gateway'
-                        ]
-
-                        for (svc in services) {
-                            sh "docker build -t ${DOCKER_REGISTRY}/petclinic/${svc}:${params.GIT_TAG} ./spring-petclinic-microservices/${svc}"
-                            sh "docker push ${DOCKER_REGISTRY}/petclinic/${svc}:${params.GIT_TAG}"
-                        }
-                    }
-
-                    // 🔁 Trigger ArgoCD sync if staging
-                    if (isStaging) {
-                        sh """
-                        argocd app sync spring-petclinic-staging --revision ${params.GIT_TAG} --sync-option Prune=true
-                        """
-                    } else {
-                        sh """
-                        argocd app sync spring-petclinic-dev --sync-option Prune=true
-                        """
-                    }
                 }
             }
         }
+
     }
 
     post {
