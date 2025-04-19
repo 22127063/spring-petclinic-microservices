@@ -22,7 +22,8 @@ spec:
           image: "{{ $svc.image.repository }}:{{ $svc.tag | default "latest" }}"
           imagePullPolicy: IfNotPresent
           ports:
-            - containerPort: {{ $svc.port | default 8080 }}
+            - name: http
+              containerPort: {{ $svc.port | default 8080 }}
               protocol: TCP
 {{- end }}
 {{- end }}
