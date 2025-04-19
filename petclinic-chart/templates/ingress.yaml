@@ -1,5 +1,6 @@
 {{- range $name, $svc := .Values.services }}
 {{- if $svc.enabled }}
+---
 apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
@@ -17,7 +18,6 @@ spec:
               service:
                 name: {{ $name }}
                 port:
-                  number: {{ $svc.port }}
----
+                  number: {{ $svc.port | default 80 }}
 {{- end }}
 {{- end }}
