@@ -47,9 +47,9 @@ pipeline {
                 script {
                     // 🧱 1. Apply ArgoCD Project & App YAMLs (project, dev, staging)
                     sh """
-                    kubectl apply -f ./spring-petclinic-microservices/argocd/project.yaml
-                    kubectl apply -f ./spring-petclinic-microservices/argocd/deployment-dev.yaml
-                    kubectl apply -f ./spring-petclinic-microservices/argocd/deployment-staging.yaml
+                    kubectl apply -f ./spring-petclinic-microservices/argocd_apps/project.yaml
+                    kubectl apply -f ./spring-petclinic-microservices/argocd_apps/dev/deployment-dev.yaml
+                    kubectl apply -f ./spring-petclinic-microservices/argocd_apps/staging/deployment-staging.yaml
                     """
 
                     // 🚀 2. Staging or Dev?
