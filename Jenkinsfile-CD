@@ -9,7 +9,7 @@ pipeline {
         REPO_URL = 'https://github.com/22127063/spring-petclinic-microservices.git'
         NAMESPACE_DEV = 'dev'
         NAMESPACE_STAGING = 'staging'
-        DOCKER_REGISTRY = 'docker.io/yourusername'
+        DOCKER_REGISTRY = '22127063'
     }
 
     parameters {
@@ -83,10 +83,21 @@ pipeline {
 
                     // If deploying to staging, push the Docker images to Docker Hub
                     if (isStaging) {
-                        sh "docker build -t ${DOCKER_REGISTRY}/petclinic/customers-service:${params.GIT_TAG} ./spring-petclinic-microservices/customers-service"
-                        sh "docker push ${DOCKER_REGISTRY}/petclinic/customers-service:${params.GIT_TAG}"
+                        def services = [
+                            'customers-service',
+                            'visits-service',
+                            'vets-service',
+                            'genai-service',
+                            'admin-server',
+                            'config-server',
+                            'discovery-server',
+                            'api-gateway'
+                        ]
 
-                        // Repeat for other services...
+                        for (svc in services) {
+                            sh "docker build -t ${DOCKER_REGISTRY}/petclinic/${svc}:${params.GIT_TAG} ./spring-petclinic-microservices/${svc}"
+                            sh "docker push ${DOCKER_REGISTRY}/petclinic/${svc}:${params.GIT_TAG}"
+                        }
                     }
 
                     // Trigger ArgoCD for staging deployment
