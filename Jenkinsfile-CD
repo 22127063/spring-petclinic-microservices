@@ -108,11 +108,11 @@ pipeline {
                     // 🔁 Trigger ArgoCD sync if staging
                     if (isStaging) {
                         sh """
-                        argocd app sync petclinic-staging --revision ${params.GIT_TAG} --sync-option Prune=true
+                        argocd app sync spring-petclinic-staging --revision ${params.GIT_TAG} --sync-option Prune=true
                         """
                     } else {
                         sh """
-                        argocd app sync petclinic-dev --sync-option Prune=true
+                        argocd app sync spring-petclinic-dev --sync-option Prune=true
                         """
                     }
                 }
