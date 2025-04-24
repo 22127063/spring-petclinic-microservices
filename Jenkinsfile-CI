@@ -72,7 +72,7 @@ pipeline {
                     def services = env.CHANGED_SERVICES.trim().split(" ")
                     for (service in services) {
                         echo "🔬 Testing service: ${service}"
-                        dir("spring-petclinic-microservices/${service}") {
+                        dir("${service}") {
                             if (!env.SERVICES_WITHOUT_TESTS.contains(service)) {
                                 try {
                                     sh 'mvn clean test jacoco:report -Dspring.cloud.config.enabled=false'
