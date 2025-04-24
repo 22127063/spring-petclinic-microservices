@@ -124,7 +124,7 @@ pipeline {
                         }
 
                         def coverage = covered / (missed + covered)
-                        def percent = (coverage * 100).round(2)
+                        def percent = Math.round(coverage * 100) / 100.0
                         echo "📊 ${service} test coverage: ${percent}%"
 
                         if (coverage < 0.7) {
