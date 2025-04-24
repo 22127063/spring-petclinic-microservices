@@ -82,8 +82,19 @@ pipeline {
                                 }
 
                                 junit allowEmptyResults: true, testResults: '**/target/surefire-reports/*.xml'
-                                recordCoverage(tools: [[parser: 'JACOCO']], 
-                                        sourceDirectories: [[path: '**/target/site/jacoco/jacoco.xml']])
+                                recordCoverage(
+                                    tools: [[parser: 'JACOCO', id: ${service}, name: ${service}]],
+                                    sourceDirectories: [[path: 'spring-petclinic-microservices/vets-service/src/main/java']]
+                                )
+
+                                publishHTML(target: [
+                                    reportDir: 'target/site/jacoco',
+                                    reportFiles: 'index.html',
+                                    reportName: "JaCoCo Report - ${service}",
+                                    keepAll: true,
+                                    alwaysLinkToLastBuild: true,
+                                    allowMissing: true
+                                ])
                             } else {
                                 echo "⏭ Skipping tests for ${service} (No test folders)"
                             }
@@ -220,7 +231,7 @@ pipeline {
                                 docker image prune -f
                                 """
                             } else {
-                                echo "Dockerfile not found for ${service}, skipping build."
+                                echo "Dockerfile not found at root of spring-petclinic-microservices, skipping build."
                             }
                         }
                     }
