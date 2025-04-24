@@ -83,7 +83,7 @@ pipeline {
 
                                 junit allowEmptyResults: true, testResults: '**/target/surefire-reports/*.xml'
                                 recordCoverage(tools: [[parser: 'JACOCO']], 
-                                            sourceDirectories: [[path: '**/target/surefire-reports/*.xml']])
+                                        sourceDirectories: [[path: '**/target/site/jacoco/jacoco.xml']])
                             } else {
                                 echo "⏭ Skipping tests for ${service} (No test folders)"
                             }
