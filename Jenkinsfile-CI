@@ -67,34 +67,34 @@ pipeline {
                 }
             }
         }
-        
+
         stage('Test Services') {
             when {
                 expression { return !env.CHANGED_SERVICES.trim().isEmpty() }
             }
             steps {
                 script {
-                    def serviceList = env.CHANGED_SERVICES.trim().split(" ")
-                    for (service in serviceList) {
+                    def services = env.CHANGED_SERVICES.trim().split(" ")
+                    for (service in services) {
                         echo "🔬 Testing service: ${service}"
                         dir("spring-petclinic-microservices/${service}") {
                             if (fileExists('pom.xml')) {
                                 echo "pom.xml found in ${service}"
                                 if (!env.SERVICES_WITHOUT_TESTS.contains(service)) {
                                     try {
-                                        sh 'mvn clean test -Dspring.cloud.config.enabled=false'
+                                        sh 'mvn clean test jacoco:report -Dspring.cloud.config.enabled=false'
                                     } catch (Exception e) {
-                                        echo "Warning: Tests failed for ${service}, but continuing pipeline"
+                                        echo "Tests failed for ${service}, continuing as UNSTABLE"
                                         currentBuild.result = 'UNSTABLE'
                                     }
-                                    
+
                                     junit allowEmptyResults: true, testResults: '**/target/surefire-reports/*.xml'
                                     recordCoverage tools: [jacoco(reportPattern: '**/target/site/jacoco/jacoco.xml')]
                                 } else {
-                                    echo "Skipping tests for ${service} (No test folders)"
+                                    echo "⏭ Skipping tests for ${service} (No test folders)"
                                 }
                             } else {
-                                echo "pom.xml NOT FOUND in ${service}. Skipping tests."
+                                echo "pom.xml NOT FOUND in ${service}, skipping tests"
                             }
                         }
                     }
@@ -108,16 +108,26 @@ pipeline {
             }
             steps {
                 script {
-                    def serviceList = env.CHANGED_SERVICES.trim().split(" ")
-                    for (service in serviceList) {
-                        def servicePath = "spring-petclinic-microservices/${service}/target/site/jacoco/jacoco.xml"
-                        if (fileExists(servicePath)) {
-                            def coverage = sh(script: "tail -1 ${servicePath} | cut -d',' -f4", returnStdout: true).trim()
-                            if (coverage.toInteger() < 70) {
-                                error("Test coverage below 70% for ${service}")
-                            }
-                        } else {
+                    def services = env.CHANGED_SERVICES.trim().split(" ")
+                    for (service in services) {
+                        def xmlPath = "spring-petclinic-microservices/${service}/target/site/jacoco/jacoco.xml"
+                        if (!fileExists(xmlPath)) {
                             error("Coverage report missing for ${service}")
+                        }
+
+                        def xml = readFile(xmlPath)
+                        def missed = 0.0, covered = 0.0
+                        (xml =~ /<counter type="INSTRUCTION" missed="([^"]*)" covered="([^"]*)"/).each {
+                            missed += it[1].toFloat()
+                            covered += it[2].toFloat()
+                        }
+
+                        def coverage = covered / (missed + covered)
+                        def percent = (coverage * 100).round(2)
+                        echo "📊 ${service} test coverage: ${percent}%"
+
+                        if (coverage < 0.7) {
+                            error("Coverage below 70% for ${service}")
                         }
                     }
                 }
