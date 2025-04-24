@@ -73,24 +73,19 @@ pipeline {
                     for (service in services) {
                         echo "🔬 Testing service: ${service}"
                         dir("spring-petclinic-microservices/${service}") {
-                            if (fileExists('pom.xml')) {
-                                echo "pom.xml found in ${service}"
-                                if (!env.SERVICES_WITHOUT_TESTS.contains(service)) {
-                                    try {
-                                        sh 'mvn clean test jacoco:report -Dspring.cloud.config.enabled=false'
-                                    } catch (Exception e) {
-                                        echo "Tests failed for ${service}, continuing as UNSTABLE"
-                                        currentBuild.result = 'UNSTABLE'
-                                    }
-
-                                    junit allowEmptyResults: true, testResults: '**/target/surefire-reports/*.xml'
-                                    recordCoverage(tools: [[parser: 'JACOCO']], 
-                                                sourceDirectories: [[path: '**/target/surefire-reports/*.xml']])
-                                } else {
-                                    echo "⏭ Skipping tests for ${service} (No test folders)"
+                            if (!env.SERVICES_WITHOUT_TESTS.contains(service)) {
+                                try {
+                                    sh 'mvn clean test jacoco:report -Dspring.cloud.config.enabled=false'
+                                } catch (Exception e) {
+                                    echo "Tests failed for ${service}, continuing as UNSTABLE"
+                                    currentBuild.result = 'UNSTABLE'
                                 }
+
+                                junit allowEmptyResults: true, testResults: '**/target/surefire-reports/*.xml'
+                                recordCoverage(tools: [[parser: 'JACOCO']], 
+                                            sourceDirectories: [[path: '**/target/surefire-reports/*.xml']])
                             } else {
-                                echo "pom.xml NOT FOUND in ${service}, skipping tests"
+                                echo "⏭ Skipping tests for ${service} (No test folders)"
                             }
                         }
                     }
