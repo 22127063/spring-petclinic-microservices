@@ -101,28 +101,29 @@ pipeline {
                 script {
                     def services = env.CHANGED_SERVICES.trim().split(" ")
                     for (service in services) {
-                        dir("${service}") {
-                            def xmlPath = "target/site/jacoco/jacoco.xml"
-                            echo "📁 Checking coverage for ${service} at path: ${xmlPath}"
-                            
-                            if (!fileExists(xmlPath)) {
-                                error("Coverage report missing for ${service}")
-                            }
+                        if (env.SERVICES_WITHOUT_TESTS.contains(service)) {
+                            echo "⏭ Skipping coverage check for ${service} (no tests)"
+                            continue
+                        }
 
-                            def xml = readFile(xmlPath)
-                            def missed = 0.0, covered = 0.0
-                            (xml =~ /<counter type="INSTRUCTION" missed="([^"]*)" covered="([^"]*)"/).each {
-                                missed += it[1].toFloat()
-                                covered += it[2].toFloat()
-                            }
+                        def xmlPath = "${service}/target/site/jacoco/jacoco.xml"
+                        if (!fileExists(xmlPath)) {
+                            error("🚫 Coverage report missing for ${service}")
+                        }
 
-                            def coverage = covered / (missed + covered)
-                            def percent = Math.round(coverage * 100) / 100.0
-                            echo "📊 ${service} test coverage: ${percent * 100}%"
+                        def xml = readFile(xmlPath)
+                        def missed = 0.0, covered = 0.0
+                        (xml =~ /<counter type="INSTRUCTION" missed="([^"]*)" covered="([^"]*)"/).each {
+                            missed += it[1].toFloat()
+                            covered += it[2].toFloat()
+                        }
 
-                            if (coverage < 0.7) {
-                                error("Coverage below 70% for ${service}")
-                            }
+                        def coverage = covered / (missed + covered)
+                        def percent = Math.round(coverage * 100) / 100.0
+                        echo "📊 ${service} test coverage: ${percent}%"
+
+                        if (coverage < 0.7) {
+                            error("❌ Coverage below 70% for ${service}")
                         }
                     }
                 }
@@ -145,10 +146,10 @@ pipeline {
                                 archiveArtifacts artifacts: 'target/*.jar', fingerprint: true
 
                                 // 🧪 Kiểm tra xem data.sql có trong JAR không
-                                echo "🧐 Checking if data.sql is packaged inside the JAR..."
+                                echo "Checking if data.sql is packaged inside the JAR..."
                                 sh '''
                                 cd target
-                                jar tf *.jar | grep data.sql || echo "⚠️ data.sql not found in JAR"
+                                jar tf *.jar | grep data.sql || echo "data.sql not found in JAR"
                                 '''
                             } else {
                                 echo "pom.xml NOT FOUND in ${service}. Skipping build."
@@ -167,7 +168,7 @@ pipeline {
                 script {
                     def servicesList = env.CHANGED_SERVICES.tokenize(' ')
                     if (servicesList.isEmpty()) {
-                        error("❌ No changed services found. Check Detect Changes stage.")
+                        error("No changed services found. Check Detect Changes stage.")
                     }
 
                     def servicePorts = [
