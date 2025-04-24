@@ -89,7 +89,7 @@ pipeline {
                                     }
                                     
                                     junit allowEmptyResults: true, testResults: '**/target/surefire-reports/*.xml'
-                                    recordCoverage tools: [[jacoco: '**/target/site/jacoco/jacoco.xml']]
+                                    recordCoverage tools: [jacoco(reportPattern: '**/target/site/jacoco/jacoco.xml')]
                                 } else {
                                     echo "Skipping tests for ${service} (No test folders)"
                                 }
@@ -110,7 +110,7 @@ pipeline {
                 script {
                     def serviceList = env.CHANGED_SERVICES.trim().split(" ")
                     for (service in serviceList) {
-                        def servicePath = "spring-petclinic-microservices/${service}/target/site/jacoco/jacoco.csv"
+                        def servicePath = "spring-petclinic-microservices/${service}/target/site/jacoco/jacoco.xml"
                         if (fileExists(servicePath)) {
                             def coverage = sh(script: "tail -1 ${servicePath} | cut -d',' -f4", returnStdout: true).trim()
                             if (coverage.toInteger() < 70) {
