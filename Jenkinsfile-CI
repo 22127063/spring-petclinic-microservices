@@ -71,7 +71,7 @@ pipeline {
                 script {
                     def services = env.CHANGED_SERVICES.trim().split(" ")
                     for (service in services) {
-                        echo "🔬 Testing service: ${service}"
+                        echo "Testing service: ${service}"
                         dir("${service}") {
                             if (!env.SERVICES_WITHOUT_TESTS.contains(service)) {
                                 try {
@@ -102,13 +102,14 @@ pipeline {
                     def services = env.CHANGED_SERVICES.trim().split(" ")
                     for (service in services) {
                         if (env.SERVICES_WITHOUT_TESTS.contains(service)) {
-                            echo "⏭ Skipping coverage check for ${service} (no tests)"
+                            echo "Skipping coverage check for ${service} (no tests)"
                             continue
                         }
 
                         def xmlPath = "${service}/target/site/jacoco/jacoco.xml"
                         if (!fileExists(xmlPath)) {
-                            error("🚫 Coverage report missing for ${service}")
+                            error("Coverage report missing for ${service}")
+                            continue
                         }
 
                         def xml = readFile(xmlPath)
@@ -120,10 +121,10 @@ pipeline {
 
                         def coverage = covered / (missed + covered)
                         def percent = Math.round(coverage * 100) / 100.0
-                        echo "📊 ${service} test coverage: ${percent}%"
+                        echo "${service} test coverage: ${percent}%"
 
                         if (coverage < 0.7) {
-                            error("❌ Coverage below 70% for ${service}")
+                            error("Coverage below 70% for ${service}")
                         }
                     }
                 }
@@ -145,7 +146,7 @@ pipeline {
                                 sh 'mvn clean package -DskipTests -Dspring.cloud.config.enabled=false'
                                 archiveArtifacts artifacts: 'target/*.jar', fingerprint: true
 
-                                // 🧪 Kiểm tra xem data.sql có trong JAR không
+                                // Kiểm tra xem data.sql có trong JAR không
                                 echo "Checking if data.sql is packaged inside the JAR..."
                                 sh '''
                                 cd target
@@ -195,7 +196,7 @@ pipeline {
                     }
 
                     for (service in servicesList) {
-                        echo "🐳 Building & pushing Docker image for ${service}..."
+                        echo "Building & pushing Docker image for ${service}..."
                         def shortServiceName = service.replaceFirst("spring-petclinic-", "")
                         def servicePort = servicePorts.get(service, 8080)
 
@@ -217,7 +218,7 @@ pipeline {
                                 docker image prune -f
                                 """
                             } else {
-                                echo "❌ Dockerfile not found for ${service}, skipping build."
+                                echo "Dockerfile not found for ${service}, skipping build."
                             }
                         }
                     }
