@@ -99,7 +99,9 @@ pipeline {
             }
             steps {
                 script {
-                    def services = env.CHANGED_SERVICES.trim().split(" ")
+                    def allowedServices = ['customer', 'vets', 'visits']
+                    def services = env.CHANGED_SERVICES.trim().split(" ").findAll { allowedServices.contains(it) }
+
                     for (service in services) {
                         if (env.SERVICES_WITHOUT_TESTS.contains(service)) {
                             echo "Skipping coverage check for ${service} (no tests)"
