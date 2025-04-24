@@ -75,7 +75,7 @@ pipeline {
                         dir("${service}") {
                             if (!env.SERVICES_WITHOUT_TESTS.contains(service)) {
                                 try {
-                                    sh 'mvn clean test jacoco:report -Dspring.cloud.config.enabled=false'
+                                    sh 'mvn clean test jacoco:report'
                                 } catch (Exception e) {
                                     echo "Tests failed for ${service}, continuing as UNSTABLE"
                                     currentBuild.result = 'UNSTABLE'
@@ -101,7 +101,7 @@ pipeline {
                 script {
                     def services = env.CHANGED_SERVICES.trim().split(" ")
                     for (service in services) {
-                        def xmlPath = "spring-petclinic-microservices/${service}/target/site/jacoco/jacoco.xml"
+                        def xmlPath = "target/site/jacoco/jacoco.xml"
                         if (!fileExists(xmlPath)) {
                             error("Coverage report missing for ${service}")
                         }
