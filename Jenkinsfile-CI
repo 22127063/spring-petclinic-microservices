@@ -95,30 +95,34 @@ pipeline {
 
         stage('Check Test Coverage') {
             when {
-                expression { !env.CHANGED_SERVICES.trim().isEmpty()}
+                expression { !env.CHANGED_SERVICES.trim().isEmpty() }
             }
             steps {
                 script {
                     def services = env.CHANGED_SERVICES.trim().split(" ")
                     for (service in services) {
-                        def xmlPath = "target/site/jacoco/jacoco.xml"
-                        if (!fileExists(xmlPath)) {
-                            error("Coverage report missing for ${service}")
-                        }
+                        dir("${service}") {
+                            def xmlPath = "target/site/jacoco/jacoco.xml"
+                            echo "📁 Checking coverage for ${service} at path: ${xmlPath}"
+                            
+                            if (!fileExists(xmlPath)) {
+                                error("Coverage report missing for ${service}")
+                            }
 
-                        def xml = readFile(xmlPath)
-                        def missed = 0.0, covered = 0.0
-                        (xml =~ /<counter type="INSTRUCTION" missed="([^"]*)" covered="([^"]*)"/).each {
-                            missed += it[1].toFloat()
-                            covered += it[2].toFloat()
-                        }
+                            def xml = readFile(xmlPath)
+                            def missed = 0.0, covered = 0.0
+                            (xml =~ /<counter type="INSTRUCTION" missed="([^"]*)" covered="([^"]*)"/).each {
+                                missed += it[1].toFloat()
+                                covered += it[2].toFloat()
+                            }
 
-                        def coverage = covered / (missed + covered)
-                        def percent = Math.round(coverage * 100) / 100.0
-                        echo "📊 ${service} test coverage: ${percent}%"
+                            def coverage = covered / (missed + covered)
+                            def percent = Math.round(coverage * 100) / 100.0
+                            echo "📊 ${service} test coverage: ${percent * 100}%"
 
-                        if (coverage < 0.7) {
-                            error("Coverage below 70% for ${service}")
+                            if (coverage < 0.7) {
+                                error("Coverage below 70% for ${service}")
+                            }
                         }
                     }
                 }
