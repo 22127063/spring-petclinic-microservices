@@ -12,9 +12,14 @@ pipeline {
         stage('Checkout Code') {
             steps {
                 script {
-                    dir('spring-petclinic-microservices') {
-                        sh 'git pull origin main'
-                    }
+                    sh '''
+                    if [ ! -d spring-petclinic-microservices ]; then
+                        git clone https://github.com/22127063/spring-petclinic-microservices.git
+                    fi
+                    cd spring-petclinic-microservices
+                    git reset --hard HEAD
+                    git pull origin main
+                    '''
                 }
             }
         }
@@ -72,7 +77,7 @@ pipeline {
                     def services = env.CHANGED_SERVICES.trim().split(" ")
                     for (service in services) {
                         echo "Testing service: ${service}"
-                        dir("${service}") {
+                        dir("spring-petclinic-microservices/${service}") {
                             if (!env.SERVICES_WITHOUT_TESTS.contains(service)) {
                                 try {
                                     sh 'mvn clean test jacoco:report'
