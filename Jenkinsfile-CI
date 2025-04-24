@@ -89,17 +89,8 @@ pipeline {
                                 junit allowEmptyResults: true, testResults: '**/target/surefire-reports/*.xml'
                                 recordCoverage(
                                     tools: [[parser: 'JACOCO', id: "${service}", name: "${service}"]],
-                                    sourceDirectories: [[path: 'spring-petclinic-microservices/vets-service/src/main/java']]
+                                    sourceDirectories: [[path: '**/target/site/jacoco/jacoco.xml']]
                                 )
-
-                                publishHTML(target: [
-                                    reportDir: 'target/site/jacoco',
-                                    reportFiles: 'index.html',
-                                    reportName: "JaCoCo Report - ${service}",
-                                    keepAll: true,
-                                    alwaysLinkToLastBuild: true,
-                                    allowMissing: true
-                                ])
                             } else {
                                 echo "⏭ Skipping tests for ${service} (No test folders)"
                             }
