@@ -77,13 +77,26 @@ pipeline {
                                 try {
                                     sh 'mvn clean test jacoco:report'
                                 } catch (Exception e) {
-                                    echo "Tests failed for ${service}, continuing as UNSTABLE"
+                                    echo "❗ Tests failed for ${service}, continuing as UNSTABLE"
                                     currentBuild.result = 'UNSTABLE'
                                 }
 
                                 junit allowEmptyResults: true, testResults: '**/target/surefire-reports/*.xml'
-                                recordCoverage(tools: [[parser: 'JACOCO']], 
-                                        sourceDirectories: [[path: '**/target/site/jacoco/jacoco.xml']])
+
+                                recordCoverage(
+                                    tools: [[parser: 'JACOCO']],
+                                    sourceDirectories: [[path: '**/target/site/jacoco/jacoco.xml']]
+                                )
+
+                                // 📊 Hiển thị JaCoCo HTML report riêng cho từng service
+                                publishHTML(target: [
+                                    reportDir: 'target/site/jacoco',
+                                    reportFiles: 'index.html',
+                                    reportName: "JaCoCo Report - ${service}",
+                                    keepAll: true,
+                                    alwaysLinkToLastBuild: true,
+                                    allowMissing: true
+                                ])
                             } else {
                                 echo "⏭ Skipping tests for ${service} (No test folders)"
                             }
