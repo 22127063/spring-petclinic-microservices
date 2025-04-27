@@ -123,8 +123,10 @@ pipeline {
 
 def getCommitHash(serviceName, branchName) {
     dir("spring-petclinic-microservices") {
+        sh "git fetch origin ${branchName}"
         sh "git checkout ${branchName}"
         def hash = sh(script: "git rev-parse --short HEAD", returnStdout: true).trim()
         return hash
     }
 }
+
